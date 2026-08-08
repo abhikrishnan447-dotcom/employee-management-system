@@ -70,6 +70,19 @@ class ProgressUpdate(models.Model):
         return f"{self.task.title} - {self.progress}%"
 
 
+class TaskFile(models.Model):
+    task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name="uploaded_files")
+    employee = models.ForeignKey(Register, on_delete=models.CASCADE, related_name="task_files")
+    file = models.FileField(upload_to="task_files/")
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-uploaded_at"]
+
+    def __str__(self):
+        return f"{self.task.title} - {self.employee.name}"
+
+
 class ExtensionRequest(models.Model):
     STATUS_CHOICES = (("Pending", "Pending"), ("Approved", "Approved"), ("Rejected", "Rejected"))
     task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name="extension_requests")
