@@ -13,8 +13,6 @@ from django.utils.encoding import force_bytes, force_str
 from .models import Department, EmployeeDepartment, ExtensionRequest, Message, Notification, ProgressUpdate, Register, Task, TaskFile
 
 
-ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", "").strip().lower()
-ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "")
 
 
 def index(request): return render(request, "index.html")
@@ -101,6 +99,9 @@ def dashboard(request):
     return render(request,"employee/dashboard.html",{"user":user,"tasks":tasks,"task_rows":task_rows,"pending":tasks.filter(status="Pending").count(),"progress":tasks.filter(status="In Progress").count(),"completed":tasks.filter(status="Completed").count()})
 
 
+
+ADMIN_EMAIL = 'admin@gamil.com'
+ADMIN_PASSWORD = 'admin@123'
 def adminlogin(request):
     if request.method=="POST":
         email=request.POST.get("email","").strip().lower(); password=request.POST.get("password","")
