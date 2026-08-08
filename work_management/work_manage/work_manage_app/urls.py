@@ -1,5 +1,6 @@
 from django.urls import path
 from . import views
+from . import fixes
 
 urlpatterns = [
     path("", views.index, name="index"),
@@ -37,11 +38,11 @@ urlpatterns = [
     path("tasks/", views.employee_tasks, name="employee_tasks"),
     path("tasks/<int:task_id>/", views.task_detail, name="task_detail"),
     path("progress-updates/", views.progress_updates, name="progress_updates"),
-    path("tasks/<int:task_id>/progress/", views.progress_update, name="progress_update"),
-    path("tasks/<int:task_id>/upload-file/", views.task_file_upload, name="task_file_upload"),
+    path("tasks/<int:task_id>/progress/", fixes.progress_update_fixed, name="progress_update"),
+    path("tasks/<int:task_id>/upload-file/", fixes.task_file_upload_fixed, name="task_file_upload"),
     path("task-files/<int:file_id>/delete/", views.task_file_delete, name="task_file_delete"),
-    path("progress-updates/<int:update_id>/edit/", views.progress_edit, name="progress_edit"),
-    path("progress-updates/<int:update_id>/delete/", views.progress_delete, name="progress_delete"),
+    path("progress-updates/<int:update_id>/edit/", fixes.progress_edit_fixed, name="progress_edit"),
+    path("progress-updates/<int:update_id>/delete/", fixes.progress_delete_fixed, name="progress_delete"),
     path("extension-requests/", views.extension_requests_employee, name="extension_requests_employee"),
     path("tasks/<int:task_id>/extension/", views.request_extension, name="request_extension"),
     path("extension-requests/<int:request_id>/edit/", views.extension_edit, name="extension_edit"),
