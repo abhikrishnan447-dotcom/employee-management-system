@@ -1,0 +1,1 @@
+{% extends 'admin/base.html' %}{% block content %}<h2>Messages</h2>{% for m in messages_list %}<div class="card card-body mb-2"><strong>{{ m.subject }}</strong><p>{{ m.body }}</p><small>{{ m.sender.name }} → {{ m.recipient.name }} · {{ m.created_at }}</small></div>{% empty %}<p>No messages.</p>{% endfor %}{% endblock %}
