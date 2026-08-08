@@ -14,6 +14,8 @@ def index(request):
 
 
 def register(request):
+    departments = Department.objects.all().order_by("name")
+
     if request.method == "POST":
         name = request.POST.get("name", "").strip()
         profile_photo = request.FILES.get("profile_photo")
@@ -21,12 +23,19 @@ def register(request):
         phone = request.POST.get("phone", "").strip()
         password = request.POST.get("password", "")
         confirm_password = request.POST.get("confirm_password", "")
+        department_id = request.POST.get("department")
+        designation = request.POST.get("designation", "").strip()
+
         if not name or len(name) < 3:
             messages.error(request, "Please enter a valid name.")
         elif not phone.isdigit() or len(phone) != 10:
             messages.error(request, "Please enter a valid 10-digit phone number.")
         elif Register.objects.filter(email=email).exists():
             messages.error(request, "Email already exists.")
+        elif not department_id:
+            messages.error(request, "Please select a department.")
+        elif not Department.objects.filter(id=department_id).exists():
+            messages.error(request, "Selected department is not available.")
         elif len(password) < 8:
             messages.error(request, "Password must contain at least 8 characters.")
         elif password != confirm_password:
@@ -34,10 +43,24 @@ def register(request):
         elif profile_photo and profile_photo.size > 2 * 1024 * 1024:
             messages.error(request, "Profile photo must be smaller than 2 MB.")
         else:
-            Register.objects.create(name=name, email=email, phone=phone, password=make_password(password), profile_photo=profile_photo)
+            employee = Register.objects.create(
+                name=name,
+                email=email,
+                phone=phone,
+                password=make_password(password),
+                profile_photo=profile_photo,
+            )
+            EmployeeDepartment.objects.update_or_create(
+                employee=employee,
+                defaults={
+                    "department_id": department_id,
+                    "designation": designation,
+                },
+            )
             messages.success(request, "Registration successful. Please login.")
             return redirect("login")
-    return render(request, "register.html")
+
+    return render(request, "register.html", {"departments": departments})
 
 
 def login_view(request):
@@ -121,12 +144,14 @@ def adminlogout(request):
 
 
 def employee_management(request):
-    if not is_admin(request): return redirect("adminlogin")
+    if not is_admin(request):
+        return redirect("adminlogin")
     return render(request, "admin/employees.html", {"employees": Register.objects.all().order_by("name"), "departments": Department.objects.all()})
 
 
 def employee_edit(request, employee_id):
-    if not is_admin(request): return redirect("adminlogin")
+    if not is_admin(request):
+        return redirect("adminlogin")
     employee = get_object_or_404(Register, id=employee_id)
     if request.method == "POST":
         employee.name = request.POST.get("name", employee.name).strip()
@@ -141,7 +166,8 @@ def employee_edit(request, employee_id):
 
 
 def department_management(request):
-    if not is_admin(request): return redirect("adminlogin")
+    if not is_admin(request):
+        return redirect("adminlogin")
     if request.method == "POST":
         name = request.POST.get("name", "").strip()
         description = request.POST.get("description", "").strip()
@@ -152,18 +178,22 @@ def department_management(request):
 
 
 def department_delete(request, department_id):
-    if not is_admin(request): return redirect("adminlogin")
-    if request.method == "POST": get_object_or_404(Department, id=department_id).delete()
+    if not is_admin(request):
+        return redirect("adminlogin")
+    if request.method == "POST":
+        get_object_or_404(Department, id=department_id).delete()
     return redirect("department_management")
 
 
 def task_management(request):
-    if not is_admin(request): return redirect("adminlogin")
+    if not is_admin(request):
+        return redirect("adminlogin")
     return render(request, "admin/tasks.html", {"tasks": Task.objects.select_related("assigned_to", "department"), "employees": Register.objects.filter(status="Active"), "departments": Department.objects.all()})
 
 
 def assign_task(request):
-    if not is_admin(request): return redirect("adminlogin")
+    if not is_admin(request):
+        return redirect("adminlogin")
     if request.method == "POST":
         employee = get_object_or_404(Register, id=request.POST.get("assigned_to"))
         task = Task.objects.create(title=request.POST.get("title", "").strip(), description=request.POST.get("description", "").strip(), assigned_to=employee, department_id=request.POST.get("department") or None, deadline=request.POST.get("deadline"), priority=request.POST.get("priority", "Medium"))
@@ -174,20 +204,23 @@ def assign_task(request):
 
 def employee_tasks(request):
     user = current_employee(request)
-    if not user: return redirect("login")
+    if not user:
+        return redirect("login")
     return render(request, "employee/tasks.html", {"tasks": user.tasks.all()})
 
 
 def task_detail(request, task_id):
     user = current_employee(request)
-    if not user: return redirect("login")
+    if not user:
+        return redirect("login")
     task = get_object_or_404(Task, id=task_id, assigned_to=user)
     return render(request, "employee/task_detail.html", {"task": task, "updates": task.updates.all(), "extensions": task.extension_requests.all()})
 
 
 def progress_update(request, task_id):
     user = current_employee(request)
-    if not user: return redirect("login")
+    if not user:
+        return redirect("login")
     task = get_object_or_404(Task, id=task_id, assigned_to=user)
     if request.method == "POST":
         progress = max(0, min(100, int(request.POST.get("progress", 0))))
@@ -201,7 +234,8 @@ def progress_update(request, task_id):
 
 def request_extension(request, task_id):
     user = current_employee(request)
-    if not user: return redirect("login")
+    if not user:
+        return redirect("login")
     task = get_object_or_404(Task, id=task_id, assigned_to=user)
     if request.method == "POST":
         ExtensionRequest.objects.create(task=task, employee=user, requested_deadline=request.POST.get("requested_deadline"), reason=request.POST.get("reason", "").strip())
@@ -210,12 +244,14 @@ def request_extension(request, task_id):
 
 
 def extension_requests(request):
-    if not is_admin(request): return redirect("adminlogin")
+    if not is_admin(request):
+        return redirect("adminlogin")
     return render(request, "admin/extensions.html", {"requests": ExtensionRequest.objects.select_related("task", "employee")})
 
 
 def extension_action(request, request_id, action):
-    if not is_admin(request): return redirect("adminlogin")
+    if not is_admin(request):
+        return redirect("adminlogin")
     extension = get_object_or_404(ExtensionRequest, id=request_id)
     if request.method == "POST" and action in ("approve", "reject"):
         extension.status = "Approved" if action == "approve" else "Rejected"
@@ -230,7 +266,8 @@ def extension_action(request, request_id, action):
 
 def notifications(request):
     user = current_employee(request)
-    if not user: return redirect("login")
+    if not user:
+        return redirect("login")
     items = user.notifications.all()
     items.filter(is_read=False).update(is_read=True)
     return render(request, "employee/notifications.html", {"notifications": items})
@@ -238,7 +275,8 @@ def notifications(request):
 
 def messages_view(request):
     user = current_employee(request)
-    if not user: return redirect("login")
+    if not user:
+        return redirect("login")
     if request.method == "POST":
         recipient = get_object_or_404(Register, id=request.POST.get("recipient"), status="Active")
         Message.objects.create(sender=user, recipient=recipient, subject=request.POST.get("subject", ""), body=request.POST.get("body", ""))
@@ -249,18 +287,21 @@ def messages_view(request):
 
 def profile(request):
     user = current_employee(request)
-    if not user: return redirect("login")
+    if not user:
+        return redirect("login")
     if request.method == "POST":
         user.name = request.POST.get("name", user.name).strip()
         user.phone = request.POST.get("phone", user.phone).strip()
-        if request.FILES.get("profile_photo"): user.profile_photo = request.FILES["profile_photo"]
+        if request.FILES.get("profile_photo"):
+            user.profile_photo = request.FILES["profile_photo"]
         user.save()
     return render(request, "employee/profile.html", {"user": user})
 
 
 def settings_view(request):
     user = current_employee(request)
-    if not user: return redirect("login")
+    if not user:
+        return redirect("login")
     if request.method == "POST":
         new_password = request.POST.get("new_password", "")
         if len(new_password) >= 8:
@@ -271,26 +312,31 @@ def settings_view(request):
 
 
 def reports(request):
-    if not is_admin(request): return redirect("adminlogin")
+    if not is_admin(request):
+        return redirect("adminlogin")
     tasks = Task.objects.all()
     return render(request, "admin/reports.html", {"total": tasks.count(), "pending": tasks.filter(status="Pending").count(), "progress": tasks.filter(status="In Progress").count(), "completed": tasks.filter(status="Completed").count(), "overdue": tasks.filter(deadline__lt=date.today()).exclude(status="Completed").count(), "by_department": Department.objects.annotate(task_count=Count("tasks"))})
 
 
 def admin_notifications(request):
-    if not is_admin(request): return redirect("adminlogin")
+    if not is_admin(request):
+        return redirect("adminlogin")
     return render(request, "admin/notifications.html", {"notifications": Notification.objects.select_related("recipient")})
 
 
 def admin_messages(request):
-    if not is_admin(request): return redirect("adminlogin")
+    if not is_admin(request):
+        return redirect("adminlogin")
     return render(request, "admin/messages.html", {"messages_list": Message.objects.select_related("sender", "recipient")})
 
 
 def admin_settings(request):
-    if not is_admin(request): return redirect("adminlogin")
+    if not is_admin(request):
+        return redirect("adminlogin")
     return render(request, "admin/settings.html")
 
 
 def admin_profile(request):
-    if not is_admin(request): return redirect("adminlogin")
+    if not is_admin(request):
+        return redirect("adminlogin")
     return render(request, "admin/profile.html", {"admin_email": request.session.get("admin")})
