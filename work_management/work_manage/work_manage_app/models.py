@@ -1,23 +1,30 @@
 from django.db import models
 
 
-class Register(models.Model):
-    name = models.CharField(max_length=100)
-    profile_photo = models.ImageField(upload_to="profile_photos/", blank=True, null=True)
-    email = models.EmailField(unique=True)
-    phone = models.CharField(max_length=10)
-    password = models.CharField(max_length=128)
-
-    STATUS_CHOICES = (("Active", "Active"), ("Inactive", "Inactive"))
-    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default="Active")
+class Department(models.Model):
+    name = models.CharField(max_length=100, unique=True)
+    description = models.TextField(blank=True)
 
     def __str__(self):
         return self.name
 
 
-class Department(models.Model):
-    name = models.CharField(max_length=100, unique=True)
-    description = models.TextField(blank=True)
+class Register(models.Model):
+    name = models.CharField(max_length=100)
+    profile_photo = models.ImageField(upload_to="profile_photos/", blank=True, null=True)
+    email = models.EmailField(unique=True)
+    phone = models.CharField(max_length=10)
+    department = models.ForeignKey(
+        Department,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="registered_employees",
+    )
+    password = models.CharField(max_length=128)
+
+    STATUS_CHOICES = (("Active", "Active"), ("Inactive", "Inactive"))
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default="Active")
 
     def __str__(self):
         return self.name
@@ -33,14 +40,8 @@ class EmployeeDepartment(models.Model):
 
 
 class Task(models.Model):
-    STATUS_CHOICES = (
-        ("Pending", "Pending"),
-        ("In Progress", "In Progress"),
-        ("Completed", "Completed"),
-        ("Overdue", "Overdue"),
-    )
+    STATUS_CHOICES = (("Pending", "Pending"), ("In Progress", "In Progress"), ("Completed", "Completed"), ("Overdue", "Overdue"))
     PRIORITY_CHOICES = (("Low", "Low"), ("Medium", "Medium"), ("High", "High"))
-
     title = models.CharField(max_length=200)
     description = models.TextField()
     assigned_to = models.ForeignKey(Register, on_delete=models.CASCADE, related_name="tasks")
@@ -74,7 +75,6 @@ class ProgressUpdate(models.Model):
 
 class ExtensionRequest(models.Model):
     STATUS_CHOICES = (("Pending", "Pending"), ("Approved", "Approved"), ("Rejected", "Rejected"))
-
     task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name="extension_requests")
     employee = models.ForeignKey(Register, on_delete=models.CASCADE, related_name="extension_requests")
     requested_deadline = models.DateField()
