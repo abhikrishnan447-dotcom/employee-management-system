@@ -1,3 +1,5 @@
+import os
+
 from django.contrib import messages
 from django.contrib.auth.hashers import check_password, make_password
 from django.shortcuts import redirect, render
@@ -74,7 +76,17 @@ def login_view(request):
             messages.error(request, "Your account is inactive. Please contact the administrator.")
             return redirect("login")
 
+        # Support accounts created before password hashing was introduced.
         if check_password(password, user.password):
+            authenticated = True
+        elif user.password == password:
+            user.password = make_password(password)
+            user.save(update_fields=["password"])
+            authenticated = True
+        else:
+            authenticated = False
+
+        if authenticated:
             request.session["user_id"] = user.id
             request.session["email"] = user.email
             return redirect("home")
@@ -122,10 +134,7 @@ def dashboard(request):
     return render(request, "dashboard.html", {"user": user})
 
 
-# Admin login
-# Set these environment variables in a local .env/server environment.
-import os
-
+# Admin credentials are read from environment variables instead of being stored in source code.
 ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", "")
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "")
 
