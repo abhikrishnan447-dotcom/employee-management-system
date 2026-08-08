@@ -67,11 +67,13 @@ def dashboard(request):
     if not user: return redirect("login")
     tasks=user.tasks.all()
     return render(request,"employee/dashboard.html",{"user":user,"tasks":tasks,"pending":tasks.filter(status="Pending").count(),"progress":tasks.filter(status="In Progress").count(),"completed":tasks.filter(status="Completed").count()})
-ADMIN_EMAIL=os.environ.get("ADMIN_EMAIL",""); ADMIN_PASSWORD=os.environ.get("ADMIN_PASSWORD","")
+# Simple admin credentials for local development.
+ADMIN_EMAIL = "admin@gmail.com"
+ADMIN_PASSWORD = "admin123"
 def adminlogin(request):
     if request.method=="POST":
         email=request.POST.get("email","").strip().lower(); password=request.POST.get("password","")
-        if ADMIN_EMAIL and ADMIN_PASSWORD and email==ADMIN_EMAIL.lower() and password==ADMIN_PASSWORD: request.session["admin"]=email; return redirect("admin_dash")
+        if email==ADMIN_EMAIL.lower() and password==ADMIN_PASSWORD: request.session["admin"]=email; return redirect("admin_dash")
         messages.error(request,"Invalid admin login.")
     return render(request,"adminlogin.html")
 def is_admin(request): return bool(request.session.get("admin"))
