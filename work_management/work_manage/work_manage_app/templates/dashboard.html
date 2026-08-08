@@ -1,0 +1,40 @@
+{% extends 'employee/base.html' %}
+{% block title %}Employee Dashboard | WorkSphere{% endblock %}
+{% block content %}
+<div class="page-title mb-4">
+  <h1>Welcome, {{ user.name }}</h1>
+  <p>Here is your work overview for today.</p>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-sm-6 col-lg-3"><div class="card-pro stat-card"><div class="stat-icon"><i class="bi bi-hourglass-split"></i></div><div><div class="stat-value">{{ pending }}</div><div class="stat-label">Pending</div></div></div></div>
+  <div class="col-sm-6 col-lg-3"><div class="card-pro stat-card"><div class="stat-icon"><i class="bi bi-arrow-repeat"></i></div><div><div class="stat-value">{{ progress }}</div><div class="stat-label">In Progress</div></div></div></div>
+  <div class="col-sm-6 col-lg-3"><div class="card-pro stat-card"><div class="stat-icon"><i class="bi bi-check2-circle"></i></div><div><div class="stat-value">{{ completed }}</div><div class="stat-label">Completed</div></div></div></div>
+  <div class="col-sm-6 col-lg-3"><div class="card-pro stat-card"><div class="stat-icon"><i class="bi bi-list-check"></i></div><div><div class="stat-value">{{ tasks|length }}</div><div class="stat-label">Total Tasks</div></div></div></div>
+</div>
+
+<div class="card-pro p-0 overflow-hidden">
+  <div class="section-head d-flex flex-wrap justify-content-between align-items-center gap-3">
+    <div><h5 class="mb-1">My Tasks</h5><p class="small text-secondary mb-0">Tasks assigned to you.</p></div>
+    <a href="{% url 'employee_tasks' %}" class="btn btn-sm btn-outline-primary">View All</a>
+  </div>
+  <div class="table-responsive">
+    <table class="table align-middle mb-0">
+      <thead><tr><th>Task</th><th>Priority</th><th>Deadline</th><th>Status</th><th class="text-end">Action</th></tr></thead>
+      <tbody>
+      {% for task in tasks %}
+        <tr>
+          <td><strong>{{ task.title }}</strong><div class="small text-secondary">{{ task.description|truncatechars:70 }}</div></td>
+          <td>{{ task.priority }}</td>
+          <td>{{ task.deadline|date:'M d, Y' }}</td>
+          <td><span class="badge-soft">{{ task.status }}</span></td>
+          <td class="text-end"><a href="{% url 'task_detail' task.id %}" class="btn btn-sm btn-outline-primary">View</a></td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="5" class="empty-state">No tasks assigned yet.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
