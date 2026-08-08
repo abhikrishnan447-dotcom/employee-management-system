@@ -44,19 +44,18 @@ def register(request):
         elif profile_photo and profile_photo.size > 2 * 1024 * 1024:
             messages.error(request, "Profile photo must be smaller than 2 MB.")
         else:
+            department = Department.objects.get(id=department_id)
             employee = Register.objects.create(
                 name=name,
                 email=email,
                 phone=phone,
+                department=department,
                 password=make_password(password),
                 profile_photo=profile_photo,
             )
             EmployeeDepartment.objects.update_or_create(
                 employee=employee,
-                defaults={
-                    "department_id": department_id,
-                    "designation": designation,
-                },
+                defaults={"department": department, "designation": designation},
             )
             messages.success(request, "Registration successful. Please login.")
             return redirect("login")
@@ -134,13 +133,7 @@ def is_admin(request):
 def admin_dash(request):
     if not is_admin(request):
         return redirect("adminlogin")
-    return render(request, "admin/dashboard.html", {
-        "total_employees": Register.objects.count(),
-        "active_employees": Register.objects.filter(status="Active").count(),
-        "total_tasks": Task.objects.count(),
-        "pending_extensions": ExtensionRequest.objects.filter(status="Pending").count(),
-        "completed_tasks": Task.objects.filter(status="Completed").count(),
-    })
+    return render(request, "admin/dashboard.html", {"total_employees": Register.objects.count(), "active_employees": Register.objects.filter(status="Active").count(), "total_tasks": Task.objects.count(), "pending_extensions": ExtensionRequest.objects.filter(status="Pending").count(), "completed_tasks": Task.objects.filter(status="Completed").count()})
 
 
 def adminlogout(request):
@@ -163,8 +156,10 @@ def employee_edit(request, employee_id):
         employee.email = request.POST.get("email", employee.email).strip().lower()
         employee.phone = request.POST.get("phone", employee.phone).strip()
         employee.status = request.POST.get("status", employee.status)
+        department_id = request.POST.get("department") or None
+        employee.department_id = department_id
         employee.save()
-        EmployeeDepartment.objects.update_or_create(employee=employee, defaults={"department_id": request.POST.get("department") or None, "designation": request.POST.get("designation", "")})
+        EmployeeDepartment.objects.update_or_create(employee=employee, defaults={"department_id": department_id, "designation": request.POST.get("designation", "")})
         messages.success(request, "Employee updated.")
         return redirect("employee_management")
     return render(request, "admin/employee_form.html", {"employee": employee, "departments": Department.objects.all(), "assignment": getattr(employee, "department_assignment", None)})
@@ -201,7 +196,7 @@ def assign_task(request):
         return redirect("adminlogin")
     if request.method == "POST":
         employee = get_object_or_404(Register, id=request.POST.get("assigned_to"))
-        task = Task.objects.create(title=request.POST.get("title", "").strip(), description=request.POST.get("description", "").strip(), assigned_to=employee, department_id=request.POST.get("department") or None, deadline=request.POST.get("deadline"), priority=request.POST.get("priority", "Medium"))
+        task = Task.objects.create(title=request.POST.get("title", "").strip(), description=request.POST.get("description", "").strip(), assigned_to=employee, department_id=request.POST.get("department") or employee.department_id, deadline=request.POST.get("deadline"), priority=request.POST.get("priority", "Medium"))
         Notification.objects.create(recipient=employee, title="New task assigned", message=f"You have been assigned: {task.title}")
         messages.success(request, "Task assigned successfully.")
     return redirect("task_management")
