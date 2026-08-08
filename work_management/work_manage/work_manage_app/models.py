@@ -37,7 +37,6 @@ class Task(models.Model):
     PRIORITY_CHOICES = (("Low", "Low"), ("Medium", "Medium"), ("High", "High"))
     title = models.CharField(max_length=200)
     description = models.TextField()
-    # Kept for compatibility with existing records; new assignments use assigned_employees.
     assigned_to = models.ForeignKey(Register, on_delete=models.CASCADE, related_name="tasks")
     assigned_employees = models.ManyToManyField(Register, related_name="assigned_tasks", blank=True)
     department = models.ForeignKey(Department, on_delete=models.SET_NULL, null=True, blank=True, related_name="tasks")
@@ -100,10 +99,13 @@ class Notification(models.Model):
 
 
 class Message(models.Model):
-    sender = models.ForeignKey(Register, on_delete=models.CASCADE, related_name="sent_messages")
-    recipient = models.ForeignKey(Register, on_delete=models.CASCADE, related_name="received_messages")
+    # Null sender/recipient is used only for the admin side of a conversation.
+    sender = models.ForeignKey(Register, on_delete=models.CASCADE, related_name="sent_messages", null=True, blank=True)
+    recipient = models.ForeignKey(Register, on_delete=models.CASCADE, related_name="received_messages", null=True, blank=True)
     subject = models.CharField(max_length=200)
     body = models.TextField()
+    is_admin_sender = models.BooleanField(default=False)
+    is_admin_recipient = models.BooleanField(default=False)
     is_read = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
