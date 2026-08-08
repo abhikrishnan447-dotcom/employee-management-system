@@ -8,7 +8,9 @@ def admin_badges(request):
     if user_id:
         employee = Register.objects.filter(id=user_id, status="Active").first()
 
-    employee_notification_count = employee.notifications.filter(is_read=False).count() if employee else 0
+    # Count all notifications belonging to the logged-in employee.
+    # The badge is cleared only when the employee explicitly clears notifications.
+    employee_notification_count = employee.notifications.count() if employee else 0
     employee_message_count = Message.objects.filter(recipient=employee, is_read=False).count() if employee else 0
 
     if not request.session.get("admin"):

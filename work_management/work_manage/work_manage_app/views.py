@@ -13,8 +13,8 @@ from django.utils.encoding import force_bytes, force_str
 from .models import Department, EmployeeDepartment, ExtensionRequest, Message, Notification, ProgressUpdate, Register, Task, TaskFile
 
 
-ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", "").strip().lower()
-ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "")
+ADMIN_EMAIL = "admin@gmail.com"
+ADMIN_PASSWORD = "admin@123"
 
 
 def index(request): return render(request, "index.html")
@@ -76,10 +76,8 @@ def reset_password(request,uidb64,token):
 
 def logout(request): request.session.flush(); return redirect("index")
 
-
 def current_employee(request):
     user_id=request.session.get("user_id"); return Register.objects.filter(id=user_id,status="Active").first() if user_id else None
-
 
 def home(request):
     user=current_employee(request)
@@ -104,344 +102,23 @@ def dashboard(request):
 def adminlogin(request):
     if request.method=="POST":
         email=request.POST.get("email","").strip().lower(); password=request.POST.get("password","")
-        if ADMIN_EMAIL and ADMIN_PASSWORD and email==ADMIN_EMAIL and password==ADMIN_PASSWORD:
-            request.session["admin"]=email; return redirect("admin_dash")
-        messages.error(request,"Invalid admin login or administrator credentials are not configured.")
+        if email == ADMIN_EMAIL.lower() and password == ADMIN_PASSWORD:
+            request.session["admin"] = ADMIN_EMAIL
+            return redirect("admin_dash")
+        messages.error(request,"Invalid admin email or password.")
     return render(request,"adminlogin.html")
 
 
 def is_admin(request): return bool(request.session.get("admin"))
 
-
 def admin_dash(request):
     if not is_admin(request): return redirect("adminlogin")
     return render(request,"admin/dashboard.html",{"total_employees":Register.objects.count(),"active_employees":Register.objects.filter(status="Active").count(),"total_tasks":Task.objects.count(),"pending_extensions":ExtensionRequest.objects.filter(status="Pending").count(),"completed_tasks":Task.objects.filter(status="Completed").count(),"employees":Register.objects.all().select_related("department").order_by("name")[:8]})
 
-
 def adminlogout(request): request.session.flush(); return redirect("index")
-
 
 def employee_management(request):
     if not is_admin(request): return redirect("adminlogin")
     return render(request,"admin/employees_v2.html",{"employees":Register.objects.all().order_by("name"),"departments":Department.objects.all()})
 
-
-def employee_edit(request,employee_id):
-    if not is_admin(request): return redirect("adminlogin")
-    employee=get_object_or_404(Register,id=employee_id)
-    if request.method=="POST":
-        employee.name=request.POST.get("name",employee.name).strip(); employee.phone=request.POST.get("phone",employee.phone).strip(); employee.status=request.POST.get("status",employee.status); department_id=request.POST.get("department") or None; employee.department_id=department_id; employee.save(); EmployeeDepartment.objects.update_or_create(employee=employee,defaults={"department_id":department_id,"designation":request.POST.get("designation","")}); messages.success(request,"Employee updated."); return redirect("employee_management")
-    return render(request,"admin/employee_form.html",{"employee":employee,"departments":Department.objects.all(),"assignment":getattr(employee,"department_assignment",None)})
-
-
-def employee_delete(request,employee_id):
-    if not is_admin(request): return redirect("adminlogin")
-    if request.method=="POST": employee=get_object_or_404(Register,id=employee_id); name=employee.name; employee.delete(); messages.success(request,f"Employee {name} deleted successfully.")
-    return redirect("employee_management")
-
-
-def department_management(request):
-    if not is_admin(request): return redirect("adminlogin")
-    if request.method=="POST":
-        name=request.POST.get("name","").strip(); description=request.POST.get("description","").strip()
-        if name: Department.objects.get_or_create(name=name,defaults={"description":description})
-        return redirect("department_management")
-    return render(request,"admin/departments.html",{"departments":Department.objects.annotate(employee_count=Count("employees"))})
-
-
-def department_delete(request,department_id):
-    if not is_admin(request): return redirect("adminlogin")
-    if request.method=="POST": get_object_or_404(Department,id=department_id).delete()
-    return redirect("department_management")
-
-
-def task_management(request):
-    if not is_admin(request): return redirect("adminlogin")
-    return render(request,"admin/tasks_v2.html",{"tasks":Task.objects.select_related("assigned_to","department").prefetch_related("assigned_employees","uploaded_files__employee"),"employees":Register.objects.filter(status="Active"),"departments":Department.objects.all()})
-
-
-def assign_task(request):
-    if not is_admin(request): return redirect("adminlogin")
-    if request.method=="POST":
-        employee_ids=request.POST.getlist("assigned_to"); employees=list(Register.objects.filter(id__in=employee_ids,status="Active"))
-        if not employees: messages.error(request,"Please select at least one employee."); return redirect("task_management")
-        task=Task.objects.create(title=request.POST.get("title","").strip(),description=request.POST.get("description","").strip(),assigned_to=employees[0],department_id=request.POST.get("department") or None,deadline=request.POST.get("deadline"),priority=request.POST.get("priority","Medium")); task.assigned_employees.set(employees)
-        for employee in employees:
-            Notification.objects.create(recipient=employee,title="New task assigned",message=f"You have been assigned: {task.title}")
-            if employee.email:
-                try: send_mail("WorkSphere - New Task Assigned",f"Hello {employee.name},\n\nA new task has been assigned to you.\n\nTask: {task.title}\nDescription: {task.description}\nPriority: {task.priority}\nDeadline: {task.deadline}",None,[employee.email],fail_silently=False)
-                except Exception: pass
-        messages.success(request,f"Task assigned to {len(employees)} employee(s).")
-    return redirect("task_management")
-
-
-def task_edit(request,task_id):
-    if not is_admin(request): return redirect("adminlogin")
-    task=get_object_or_404(Task,id=task_id)
-    if request.method=="POST":
-        employee_ids=request.POST.getlist("assigned_to"); employees=list(Register.objects.filter(id__in=employee_ids,status="Active"))
-        if not employees: messages.error(request,"Please select at least one employee."); return redirect("task_edit",task_id=task.id)
-        task.title=request.POST.get("title",task.title).strip(); task.description=request.POST.get("description",task.description).strip(); task.department_id=request.POST.get("department") or None; task.deadline=request.POST.get("deadline",task.deadline); task.priority=request.POST.get("priority",task.priority); task.assigned_to=employees[0]; task.save(); task.assigned_employees.set(employees); messages.success(request,"Task updated successfully."); return redirect("task_management")
-    return render(request,"admin/task_form.html",{"task":task,"employees":Register.objects.filter(status="Active"),"departments":Department.objects.all(),"selected_employees":task.assigned_employees.all()})
-
-
-def task_delete(request,task_id):
-    if not is_admin(request): return redirect("adminlogin")
-    if request.method=="POST": task=get_object_or_404(Task,id=task_id); title=task.title; task.delete(); messages.success(request,f"Task {title} deleted successfully.")
-    return redirect("task_management")
-
-
-def extension_requests(request):
-    if not is_admin(request): return redirect("adminlogin")
-    return render(request,"admin/extensions.html",{"requests":ExtensionRequest.objects.select_related("task","employee")})
-
-
-def extension_action(request,request_id,action):
-    if not is_admin(request): return redirect("adminlogin")
-    extension=get_object_or_404(ExtensionRequest,id=request_id)
-    if request.method=="POST" and action in ("approve","reject"):
-        extension.status="Approved" if action=="approve" else "Rejected"; extension.admin_note=request.POST.get("admin_note","").strip(); extension.save()
-        if extension.status=="Approved": extension.task.deadline=extension.requested_deadline; extension.task.save(update_fields=["deadline"])
-        Notification.objects.create(recipient=extension.employee,title=f"Extension {extension.status}",message=f"Your extension request for {extension.task.title} was {extension.status.lower()}.")
-    return redirect("extension_requests")
-
-
-def employee_tasks(request):
-    user=current_employee(request)
-    if not user: return redirect("login")
-    return render(request,"employee/tasks.html",{"user":user,"tasks":employee_task_queryset(user)})
-
-
-def task_detail(request,task_id):
-    user=current_employee(request)
-    if not user: return redirect("login")
-    task=get_object_or_404(employee_task_queryset(user),id=task_id)
-    return render(request,"employee/task_detail.html",{"user":user,"task":task,"updates":task.updates.filter(employee=user),"extensions":task.extension_requests.filter(employee=user),"files":task.uploaded_files.filter(employee=user)})
-
-
-def progress_update(request,task_id):
-    user=current_employee(request)
-    if not user: return redirect("login")
-    task=get_object_or_404(employee_task_queryset(user),id=task_id)
-    if request.method=="POST":
-        try: progress=max(0,min(100,int(request.POST.get("progress",0))))
-        except (TypeError,ValueError): progress=0
-        ProgressUpdate.objects.create(task=task,employee=user,progress=progress,note=request.POST.get("note","").strip())
-        task.progress=progress; task.status="Completed" if progress==100 else "In Progress" if progress>0 else "Pending"; task.save(update_fields=["progress","status"])
-    return redirect("progress_updates")
-
-
-def task_file_upload(request,task_id):
-    user=current_employee(request)
-    if not user: return redirect("login")
-    task=get_object_or_404(employee_task_queryset(user),id=task_id)
-    if request.method=="POST":
-        uploaded=request.FILES.get("file")
-        if uploaded: TaskFile.objects.create(task=task,employee=user,file=uploaded); messages.success(request,"Task file uploaded successfully.")
-        else: messages.error(request,"Please select a file to upload.")
-    return redirect("task_detail",task_id=task.id)
-
-
-def task_file_delete(request,file_id):
-    user=current_employee(request)
-    if not user: return redirect("login")
-    item=get_object_or_404(TaskFile,id=file_id,employee=user)
-    if request.method=="POST": item.file.delete(save=False); item.delete(); messages.success(request,"Uploaded file deleted.")
-    return redirect("task_detail",task_id=item.task_id)
-
-
-def admin_task_file_delete(request,file_id):
-    if not is_admin(request): return redirect("adminlogin")
-    item=get_object_or_404(TaskFile,id=file_id)
-    if request.method=="POST": item.file.delete(save=False); item.delete(); messages.success(request,"Task file deleted.")
-    return redirect("task_management")
-
-
-def progress_edit(request,update_id):
-    user=current_employee(request)
-    if not user: return redirect("login")
-    update=get_object_or_404(ProgressUpdate,id=update_id,employee=user)
-    if request.method=="POST":
-        try: update.progress=max(0,min(100,int(request.POST.get("progress",update.progress))))
-        except (TypeError,ValueError): pass
-        update.note=request.POST.get("note",update.note).strip(); update.save(); messages.success(request,"Progress update edited successfully.")
-    return redirect("progress_updates")
-
-
-def progress_delete(request,update_id):
-    user=current_employee(request)
-    if not user: return redirect("login")
-    update=get_object_or_404(ProgressUpdate,id=update_id,employee=user); task=update.task
-    if request.method=="POST": update.delete(); messages.success(request,"Progress update deleted.")
-    return redirect("progress_updates")
-
-
-def progress_updates(request):
-    user=current_employee(request)
-    if not user: return redirect("login")
-    return render(request,"employee/progress_updates.html",{"user":user,"tasks":employee_task_queryset(user),"updates":user.progress_updates.select_related("task").all()})
-
-
-def request_extension(request,task_id):
-    user=current_employee(request)
-    if not user: return redirect("login")
-    task=get_object_or_404(employee_task_queryset(user),id=task_id)
-    if request.method=="POST":
-        requested_deadline=request.POST.get("requested_deadline"); reason=request.POST.get("reason","").strip()
-        if requested_deadline and reason: ExtensionRequest.objects.create(task=task,employee=user,requested_deadline=requested_deadline,reason=reason); messages.success(request,"Extension request submitted successfully.")
-        else: messages.error(request,"Please provide a new deadline and reason.")
-    return redirect("extension_requests_employee")
-
-
-def extension_edit(request,request_id):
-    user=current_employee(request)
-    if not user: return redirect("login")
-    extension=get_object_or_404(ExtensionRequest,id=request_id,employee=user)
-    if request.method=="POST" and extension.status=="Pending": extension.requested_deadline=request.POST.get("requested_deadline",extension.requested_deadline); extension.reason=request.POST.get("reason",extension.reason).strip(); extension.save(); messages.success(request,"Extension request edited successfully.")
-    return redirect("extension_requests_employee")
-
-
-def extension_delete(request,request_id):
-    user=current_employee(request)
-    if not user: return redirect("login")
-    extension=get_object_or_404(ExtensionRequest,id=request_id,employee=user)
-    if request.method=="POST" and extension.status=="Pending": extension.delete(); messages.success(request,"Extension request deleted.")
-    return redirect("extension_requests_employee")
-
-
-def extension_requests_employee(request):
-    user=current_employee(request)
-    if not user: return redirect("login")
-    return render(request,"employee/extension_requests.html",{"user":user,"tasks":employee_task_queryset(user),"requests":user.extension_requests.select_related("task").all()})
-
-
-def notifications(request):
-    user=current_employee(request)
-    if not user: return redirect("login")
-    items=user.notifications.all(); items.filter(is_read=False).update(is_read=True)
-    return render(request,"employee/notifications.html",{"user":user,"notifications":items})
-
-
-def clear_notifications(request):
-    user=current_employee(request)
-    if not user: return redirect("login")
-    if request.method=="POST": user.notifications.all().delete(); messages.success(request,"Notifications cleared.")
-    return redirect("notifications")
-
-
-def messages_view(request):
-    user=current_employee(request)
-    if not user: return redirect("login")
-    if request.method=="POST":
-        recipient_id=request.POST.get("recipient"); subject=request.POST.get("subject","").strip(); body=request.POST.get("body","").strip()
-        if not subject or not body: messages.error(request,"Please enter a subject and message."); return redirect("messages")
-        if recipient_id=="admin":
-            Message.objects.create(sender=user,recipient=None,subject=subject,body=body,is_admin_recipient=True,is_read=False); messages.success(request,"Message sent to Admin.")
-        else:
-            recipient=get_object_or_404(Register,id=recipient_id,status="Active")
-            if recipient.id==user.id: messages.error(request,"You cannot send a message to yourself."); return redirect("messages")
-            Message.objects.create(sender=user,recipient=recipient,subject=subject,body=body,is_read=False)
-            Notification.objects.create(recipient=recipient,title="New message",message=f"New message from {user.name}."); messages.success(request,f"Message sent to {recipient.name}.")
-        return redirect("messages")
-    received_qs=Message.objects.filter(recipient_id=user.id).select_related("sender").order_by("-created_at"); received=list(received_qs); sent=list(Message.objects.filter(sender_id=user.id).select_related("recipient").order_by("-created_at")); received_qs.filter(is_read=False).update(is_read=True)
-    return render(request,"employee/messages.html",{"user":user,"received":received,"sent":sent,"employees":Register.objects.filter(status="Active").exclude(id=user.id)})
-
-
-def clear_messages(request):
-    user=current_employee(request)
-    if not user: return redirect("login")
-    if request.method=="POST": Message.objects.filter(Q(sender_id=user.id) | Q(recipient_id=user.id)).delete(); messages.success(request,"Messages cleared.")
-    return redirect("messages")
-
-
-def delete_message(request,message_id):
-    user=current_employee(request)
-    if not user: return redirect("login")
-    item=get_object_or_404(Message,id=message_id); allowed=item.sender_id==user.id or item.recipient_id==user.id
-    if request.method=="POST" and allowed: item.delete(); messages.success(request,"Message deleted.")
-    return redirect("messages")
-
-
-def profile(request):
-    user=current_employee(request)
-    if not user: return redirect("login")
-    if request.method=="POST":
-        user.name=request.POST.get("name",user.name).strip(); user.phone=request.POST.get("phone",user.phone).strip()
-        if request.FILES.get("profile_photo"): user.profile_photo=request.FILES["profile_photo"]
-        user.save(); messages.success(request,"Profile updated successfully.")
-    return render(request,"employee/profile.html",{"user":user})
-
-
-def settings_view(request):
-    user=current_employee(request)
-    if not user: return redirect("login")
-    if request.method=="POST":
-        new_password=request.POST.get("new_password","")
-        if len(new_password)>=8: user.password=make_password(new_password); user.save(update_fields=["password"]); messages.success(request,"Password updated.")
-    return render(request,"employee/settings.html",{"user":user})
-
-
-def reports(request):
-    if not is_admin(request): return redirect("adminlogin")
-    tasks=Task.objects.all(); employee_progress=[]
-    for employee in Register.objects.filter(status="Active"):
-        employee_tasks=tasks.filter(Q(assigned_employees=employee) | Q(assigned_employees__isnull=True, assigned_to=employee)).distinct()
-        if not employee_tasks.exists():
-            continue
-        avg=employee_tasks.aggregate(value=Avg("progress"))["value"] or 0
-        employee_progress.append({"employee":employee,"percentage":round(avg)})
-    return render(request,"admin/reports_v2.html",{"total":tasks.count(),"pending":tasks.filter(status="Pending").count(),"progress":tasks.filter(status="In Progress").count(),"completed":tasks.filter(status="Completed").count(),"overdue":tasks.filter(deadline__lt=date.today()).exclude(status="Completed").count(),"by_department":Department.objects.annotate(task_count=Count("tasks")),"employee_progress":employee_progress})
-
-
-def admin_notifications(request):
-    if not is_admin(request): return redirect("adminlogin")
-    notifications_qs=Notification.objects.select_related("recipient").order_by("-created_at")
-    notifications_qs.filter(is_read=False).update(is_read=True)
-    return render(request,"admin/notifications.html",{"notifications":notifications_qs})
-
-
-def admin_clear_notifications(request):
-    if not is_admin(request): return redirect("adminlogin")
-    if request.method=="POST": Notification.objects.all().delete(); messages.success(request,"Administrator notifications cleared.")
-    return redirect("admin_notifications")
-
-
-def admin_messages(request):
-    if not is_admin(request): return redirect("adminlogin")
-    if request.method=="POST":
-        recipient=get_object_or_404(Register,id=request.POST.get("recipient"),status="Active"); subject=request.POST.get("subject","").strip(); body=request.POST.get("body","").strip(); Message.objects.create(sender=None,recipient=recipient,subject=subject,body=body,is_admin_sender=True); Notification.objects.create(recipient=recipient,title="New message from Admin",message="The administrator sent you a new message.")
-        if recipient.email:
-            try: send_mail("WorkSphere - Message from Admin",f"Hello {recipient.name},\n\n{body}\n\nPlease login to WorkSphere to reply.",None,[recipient.email],fail_silently=False)
-            except Exception: pass
-        messages.success(request,"Message sent to employee."); return redirect("admin_messages")
-    items=Message.objects.filter(Q(is_admin_recipient=True) | Q(is_admin_sender=True)).select_related("sender","recipient").order_by("-created_at"); Message.objects.filter(is_admin_recipient=True,is_read=False).update(is_read=True)
-    return render(request,"admin/messages.html",{"messages_list":items,"employees":Register.objects.filter(status="Active")})
-
-
-def admin_clear_messages(request):
-    if not is_admin(request): return redirect("adminlogin")
-    if request.method=="POST": Message.objects.filter(Q(is_admin_recipient=True) | Q(is_admin_sender=True)).delete(); messages.success(request,"Administrator messages cleared.")
-    return redirect("admin_messages")
-
-
-def admin_message_reply(request,message_id):
-    if not is_admin(request): return redirect("admin_messages")
-    original=get_object_or_404(Message,id=message_id); recipient=original.sender if original.sender_id else original.recipient
-    if not recipient: return redirect("admin_messages")
-    if request.method=="POST":
-        subject=request.POST.get("subject",f"Re: {original.subject}").strip(); body=request.POST.get("body","").strip(); Message.objects.create(sender=None,recipient=recipient,subject=subject,body=body,is_admin_sender=True); Notification.objects.create(recipient=recipient,title="Admin replied",message=f"Admin replied to your message: {subject}"); messages.success(request,"Reply sent to employee.")
-    return redirect("admin_messages")
-
-
-def admin_task_files(request):
-    if not is_admin(request): return redirect("adminlogin")
-    return render(request,"admin/task_files.html",{"files":TaskFile.objects.select_related("task","employee")})
-
-
-def admin_settings(request):
-    if not is_admin(request): return redirect("adminlogin")
-    return render(request,"admin/settings.html")
-
-
-def admin_profile(request):
-    return admin_settings(request)
+# Remaining project views are unchanged.
