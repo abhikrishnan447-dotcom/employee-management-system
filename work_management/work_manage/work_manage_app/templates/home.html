@@ -1,0 +1,332 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Employee Work Management System | Work Smarter</title>
+  <meta name="description" content="A focused employee work management system for teams that value clear priorities, visibility, and progress.">
+  <meta name="keywords" content="employee work management, task management, productivity, workflow">
+  <meta property="og:title" content="Employee Work Management System"><meta property="og:description" content="Bring clarity to every task and team."><meta property="og:type" content="website">
+  <link rel="icon" type="image/png" href="{% static 'images/favicon.png' %}"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet"><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"><link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'css/style.css' %}"><link rel="stylesheet" href="{% static 'css/responsive.css' %}"><link rel="stylesheet" href="{% static 'css/loader.css' %}">
+</head>
+<body>
+<div id="page-loader" aria-label="Loading">
+  <div class="loader-inner"><img src="{% static 'images/laptop-loader.svg' %}" alt="Loading workspace"><p>Preparing your workspace<span></span></p></div>
+</div>
+<main id="site-content" class="site-content">
+<nav class="navbar navbar-expand-lg fixed-top">
+  <div class="container">
+    <a class="navbar-brand" href="#home">
+      <img src="{% static 'images/logo.svg' %}" alt="WorkSphere">Work<span>Sphere</span>
+    </a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#nav">
+        <i class="bi bi-list"></i>
+      </button>
+      <div class="collapse navbar-collapse" id="nav">
+        <ul class="navbar-nav mx-auto">
+          <li class="nav-item">
+          <a class="nav-link active" href="#home">Home</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="#features">Features</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="#workflow">Workflow</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="#about">About</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="#contact">Contact</a>
+        </li>
+      </ul>
+      <div class="nav-actions">
+        <a href="#contact" class="login-link">Login</a>
+        <a href="#contact" class="btn btn-primary ripple">Get Started <i class="bi bi-arrow-up-right"></i></a>
+      </div>
+    </div>
+  </div>
+</nav>
+<section id="home" class="hero">
+  <div class="container">
+    <div class="row align-items-center g-5">
+      <div class="col-lg-6 hero-copy reveal">
+        <span class="eyebrow"><i class="bi bi-stars"></i> A calmer way to work</span>
+        <h1>Employee Work <em>Management</em> System</h1>
+        <p>Plan meaningful work, keep progress visible, and give every employee the clarity to do their best work.</p>
+        <div class="hero-buttons">
+          <a href="{% url 'dashboard' %}" class="btn btn-primary btn-lg ripple">go to dashboard <i class="bi bi-arrow-right"></i></a>
+          <a href="#features" class="btn btn-ghost btn-lg">Learn More <i class="bi bi-play-circle"></i></a>
+        </div>
+        <div class="trusted">
+          <div class="avatar-stack"><span>AK</span><span>DM</span><span>JR</span><span>+2k</span></div>
+          <small>Trusted by productive teams everywhere</small>
+        </div>
+      </div>
+      <div class="col-lg-6 hero-art reveal delay-1">
+        <div class="orb orb-one">
+        </div>
+        <div class="orb orb-two">
+        </div>
+        <img class="dashboard" src="{% static 'images/hero-dashboard.svg' %}" alt="Employee work dashboard">
+        <div class="float-card task-card"><i class="bi bi-check2-circle"></i>
+          <div><b>Design review</b><small>Completed today</small>
+          </div>
+        </div>
+        <div class="float-card growth-card"><i class="bi bi-graph-up-arrow"></i>
+          <div><b>+24%</b><small>Team velocity</small>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+<section id="features" class="features section">
+  <div class="container">
+    <div class="section-heading reveal"><span class="eyebrow">Powerful by design</span><h2>Everything your team needs,<br><em>without the noise.</em></h2><p>Thoughtful tools that make managing work feel natural.</p>
+    </div>
+    <div class="row g-4">
+      <div class="col-md-6 col-lg-3">
+        <article class="feature-card reveal">
+          <div class="icon-box"><i class="bi bi-list-check"></i>
+          </div>
+          <h3>Assign Tasks</h3>
+          <p>Set clear owners, priorities, and due dates in moments.</p>
+          <a href="#contact" aria-label="Learn about assigning tasks"><i class="bi bi-arrow-up-right"></i></a>
+        </article>
+      </div>
+      <div class="col-md-6 col-lg-3">
+        <article class="feature-card reveal delay-1">
+          <div class="icon-box"><i class="bi bi-bar-chart-line"></i>
+          </div>
+          <h3>Track Progress</h3>
+          <p>See every project's momentum at a glance.</p>
+          <a href="#contact" aria-label="Learn about tracking progress"><i class="bi bi-arrow-up-right"></i>
+          </a>
+        </article>
+      </div>
+      <div class="col-md-6 col-lg-3">
+        <article class="feature-card reveal delay-2">
+          <div class="icon-box"><i class="bi bi-person-workspace"></i>
+          </div>
+          <h3>Employee Hub</h3>
+          <p>A focused home for each person's daily work.</p>
+          <a href="#contact" aria-label="Learn about employee hub"><i class="bi bi-arrow-up-right"></i></a>
+        </article>
+      </div>
+      <div class="col-md-6 col-lg-3">
+        <article class="feature-card reveal delay-3">
+          <div class="icon-box"><i class="bi bi-clock-history"></i>
+          </div>
+          <h3>Extensions</h3>
+          <p>Handle timing changes with a simple approval flow.</p>
+          <a href="#contact" aria-label="Learn about extensions"><i class="bi bi-arrow-up-right"></i></a>
+        </article>
+      </div>
+      <div class="col-md-6 col-lg-3">
+        <article class="feature-card reveal">
+          <div class="icon-box"><i class="bi bi-file-earmark-bar-graph"></i>
+          </div>
+          <h3>Reports</h3>
+          <p>Turn activity into useful, shareable insights.</p>
+          <a href="#contact" aria-label="Learn about reports"><i class="bi bi-arrow-up-right"></i></a>
+        </article>
+      </div>
+      <div class="col-md-6 col-lg-3">
+        <article class="feature-card reveal delay-1">
+          <div class="icon-box"><i class="bi bi-bell"></i>
+          </div>
+          <h3>Notifications</h3>
+          <p>Keep everyone informed at exactly the right time.</p>
+          <a href="#contact" aria-label="Learn about notifications"><i class="bi bi-arrow-up-right"></i></a>
+        </article>
+      </div>
+      <div class="col-md-6 col-lg-3">
+        <article class="feature-card reveal delay-2">
+          <div class="icon-box"><i class="bi bi-pie-chart"></i>
+          </div>
+          <h3>Analytics</h3>
+          <p>Spot trends and make every decision count.</p>
+          <a href="#contact" aria-label="Learn about analytics"><i class="bi bi-arrow-up-right"></i></a>
+        </article>
+      </div>
+      <div class="col-md-6 col-lg-3">
+        <article class="feature-card reveal delay-3">
+          <div class="icon-box"><i class="bi bi-shield-check"></i></div>
+          <h3>Secure Login</h3>
+          <p>Protect your people and business information.</p>
+          <a href="#contact" aria-label="Learn about secure login"><i class="bi bi-arrow-up-right"></i></a>
+        </article>
+      </div>
+    </div>
+  </div>
+</section>
+<section id="workflow" class="workflow section">
+  <div class="container">
+    <div class="row align-items-center g-5">
+      <div class="col-lg-5 reveal"><span class="eyebrow">A clear path forward</span><h2>From brief to done,<br><em>everyone stays aligned.</em></h2><p>Our lightweight workflow removes the guesswork from work management and keeps the right people in the loop.</p><img class="workflow-illustration" src="{% static 'images/workflow.svg' %}" alt="Workflow illustration">
+      </div>
+      <div class="col-lg-7"><ol class="timeline"><li class="reveal"><span><i class="bi bi-person-gear"></i></span>
+        <div><small>01</small><h3>Admin creates a plan</h3><p>Organize priorities into work your team can act on.</p>
+        </div>
+      </li>
+      <li class="reveal delay-1"><span><i class="bi bi-send-check"></i></span>
+          <div><small>02</small><h3>Assign work</h3><p>Give every task a clear owner and deadline.</p>
+          </div>
+        </li>
+        <li class="reveal delay-2"><span><i class="bi bi-arrow-repeat"></i></span>
+            <div><small>03</small><h3>Employees update progress</h3><p>Share status, context, and blockers in real time.</p>
+            </div>
+          </li>
+            <li class="reveal delay-3"><span><i class="bi bi-check-circle"></i></span>
+              <div><small>04</small><h3>Review and complete</h3><p>Approve extensions, celebrate wins, and learn.</p>
+              </div>
+            </li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </section>
+<section id="about" class="why section">
+  <div class="container">
+    <div class="section-heading text-center reveal"><span class="eyebrow">Built around your team</span>
+      <h2>Work management that <em>works for people.</em></h2>
+    </div>
+    <div class="row g-4">
+      <div class="col-md-6 col-lg">
+        <div class="why-card reveal"><i class="bi bi-lightning-charge"></i><h3>Fast</h3><p>Move from idea to action without friction.</p>
+        </div>
+      </div>
+      <div class="col-md-6 col-lg">
+        <div class="why-card reveal delay-1"><i class="bi bi-shield-lock"></i><h3>Secure</h3><p>Enterprise-minded protection, always.</p>
+        </div>
+      </div>
+      <div class="col-md-6 col-lg">
+        <div class="why-card reveal delay-2"><i class="bi bi-phone"></i><h3>Responsive</h3><p>Great work can happen from anywhere.</p>
+        </div>
+      </div>
+      <div class="col-md-6 col-lg">
+        <div class="why-card reveal delay-3"><i class="bi bi-hand-index-thumb"></i><h3>Easy to use</h3><p>Intuitive enough to start in minutes.</p>
+        </div>
+      </div>
+      <div class="col-md-12 col-lg">
+        <div class="why-card reveal"><i class="bi bi-heart-pulse"></i><h3>Reliable</h3><p>Dependable tools for every busy day.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+<section class="stats">
+  <div class="container">
+    <div class="row text-center">
+      <div class="col-6 col-lg-3">
+        <div class="stat"><strong data-count="2400">0</strong><span>Employees</span>
+        </div>
+      </div>
+      <div class="col-6 col-lg-3">
+        <div class="stat"><strong data-count="380">0</strong><span>Projects</span>
+        </div>
+      </div>
+      <div class="col-6 col-lg-3">
+        <div class="stat"><strong data-count="12800">0</strong><span>Tasks finished</span>
+        </div>
+      </div>
+      <div class="col-6 col-lg-3">
+        <div class="stat"><strong data-count="96" data-suffix="%">0</strong><span>Completion rate</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+<section class="testimonials section">
+  <div class="container">
+    <div class="section-heading reveal"><span class="eyebrow">Loved by teams</span><h2>Less chasing. More <em>meaningful work.</em></h2>
+    </div>
+    <div class="row g-4">
+      <div class="col-lg-4"><figure class="testimonial reveal"><div class="quote"><i class="bi bi-quote"></i>
+      </div>
+      <blockquote>WorkSphere gave our managers a shared language for progress. The difference was immediate.</blockquote><figcaption>
+        <div class="profile coral">JM</div>
+        <div><b>Jordan Mitchell</b><small>Operations Director, Northstar</small>
+        </div>
+      </figcaption>
+    </figure>
+  </div>
+  <div class="col-lg-4">
+    <figure class="testimonial reveal delay-1">
+      <div class="quote"><i class="bi bi-quote"></i>
+      </div>
+      <blockquote>Our team now spends its energy on delivery, not on figuring out what needs to happen next.</blockquote><figcaption>
+        <div class="profile red">SP</div>
+        <div><b>Samira Patel</b><small>People Lead, Evolve Co.</small></div>
+      </figcaption>
+    </figure>
+  </div>
+  <div class="col-lg-4">
+    <figure class="testimonial reveal delay-2">
+      <div class="quote"><i class="bi bi-quote"></i></div>
+      <blockquote>Simple enough for everyone to adopt, powerful enough to run our whole delivery process.</blockquote><figcaption>
+        <div class="profile peach">AL</div>
+        <div><b>Alex Lee</b><small>Product Manager, Assemble</small></div>
+      </figcaption>
+    </figure>
+  </div>
+</div>
+</div>
+</section>
+<section id="contact" class="contact section">
+  <div class="container">
+    <div class="contact-shell">
+      <div class="row g-0">
+        <div class="col-lg-5 contact-copy reveal"><span class="eyebrow">Let's talk</span>
+          <h2>Bring more clarity to your team's day.</h2>
+          <p>Tell us a little about your team. We'll show you a better way to manage work.</p>
+          <ul><li><i class="bi bi-envelope"></i> hello@worksphere.example</li><li><i class="bi bi-telephone"></i> +1 (555) 012-4680</li>
+            <li><i class="bi bi-geo-alt"></i> 18 Progress Avenue, Anywhere</li>
+          </ul>
+          <div class="map-box"><i class="bi bi-geo-alt-fill"></i><span>Our studio</span></div>
+        </div>
+        <div class="col-lg-7 contact-form reveal delay-1"><form id="contact-form" novalidate>
+          <div class="row g-3">
+            <div class="col-md-6"><label for="name">Your name</label><input id="name" type="text" placeholder="Alex Morgan" required>
+            </div>
+            <div class="col-md-6"><label for="email">Email address</label><input id="email" type="email" placeholder="alex@company.com" required>
+            </div>
+            <div class="col-12"><label for="message">How can we help?</label>
+              <textarea id="message" rows="5" placeholder="Tell us about your team..." required></textarea>
+            </div>
+            <div class="col-12">
+              <button class="btn btn-primary ripple" type="submit">Send message <i class="bi bi-arrow-up-right"></i></button>
+              <p class="form-status" role="status"></p>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+</section>
+<footer>
+  <div class="container">
+    <div class="footer-top"><a class="navbar-brand" href="#home"><img src="{% static 'images/logo.svg' %}" alt="WorkSphere">Work<span>Sphere</span></a>
+      <p>Make work feel clear, calm, and connected.</p>
+      <div class="socials">
+        <a href="#contact" aria-label="LinkedIn"><i class="bi bi-linkedin"></i></a>
+        <a href="#contact" aria-label="Twitter"><i class="bi bi-twitter-x"></i></a>
+        <a href="#contact" aria-label="Instagram"><i class="bi bi-instagram"></i></a>
+      </div>
+    </div>
+    <div class="footer-bottom"><small>© 2026 WorkSphere. All rights reserved.</small>
+      <div><a href="#features">Features</a>
+        <a href="#contact">Support</a><a href="#contact">Privacy</a>
+        <a href="#contact">Terms</a>
+      </div>
+    </div>
+  </div>
+</footer>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script><script src="{% static 'js/loader.js' %}"></script><script src="{% static 'js/main.js' %}"></script>
+</body>
+</html>
