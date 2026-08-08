@@ -1,9 +1,8 @@
-from django.shortcuts import render, redirect
 from django.contrib import messages
-from django.http import HttpResponse
-from . import models
-from .models import Register
+from django.contrib.auth.hashers import check_password, make_password
+from django.shortcuts import redirect, render
 
+from .models import Register
 
 
 # Home Page
@@ -11,124 +10,159 @@ def index(request):
     return render(request, "index.html")
 
 
-# Register emp
+# Employee registration
 def register(request):
-
     if request.method == "POST":
+        name = request.POST.get("name", "").strip()
+        profile_photo = request.FILES.get("profile_photo")
+        email = request.POST.get("email", "").strip().lower()
+        phone = request.POST.get("phone", "").strip()
+        password = request.POST.get("password", "")
+        confirm_password = request.POST.get("confirm_password", "")
 
-        name = request.POST.get("name")
-        photo = request.FILES.get("photo")
-        email = request.POST.get("email")
-        phone = request.POST.get("phone")
-        password = request.POST.get("password")
-        age = request.POST.get("age")
+        if not name or len(name) < 3:
+            messages.error(request, "Please enter a valid name.")
+            return render(request, "register.html")
 
-        if models.Register.objects.filter(email=email).exists():
-            return HttpResponse("<script>alert('Email already exists');window.location.href='{% url 'register' %}'</script>")
-        else:
-            user = models.Register.objects.create(name=name,email=email,phone=phone,password=password,photo=photo)
-            user.save()
-            return HttpResponse("<script>alert('Registration successfully please login');window.location.href='{% url 'login' %}'</script>")
-        
-    else:
-        return render(request, 'register.html')
+        if not phone.isdigit() or len(phone) != 10:
+            messages.error(request, "Please enter a valid 10-digit phone number.")
+            return render(request, "register.html")
 
-# Login emp
-def login_view(request):
+        if Register.objects.filter(email=email).exists():
+            messages.error(request, "Email already exists.")
+            return render(request, "register.html")
 
-    if request.method == "POST":
+        if len(password) < 8:
+            messages.error(request, "Password must contain at least 8 characters.")
+            return render(request, "register.html")
 
-        email = request.POST.get("email")
-        password = request.POST.get("password")
-        try:
-            user=models.Register.objects.get(email=email)
-            if user.password == password:
-                request.session['email'] =email
-                return redirect ('home')
-            else:
-                 return HttpResponse("<script>alert('Invalid password & Email....!!');window.location.href='/login/'</script>")
-        except models.Register.DoesNotExist:
-            return HttpResponse("<script>alert('Invalid user....!!');window.location.href='/login/'</script>")
-        
+        if password != confirm_password:
+            messages.error(request, "Passwords do not match.")
+            return render(request, "register.html")
 
+        if profile_photo and profile_photo.size > 2 * 1024 * 1024:
+            messages.error(request, "Profile photo must be smaller than 2 MB.")
+            return render(request, "register.html")
 
-    return render(request,'login.html')
+        Register.objects.create(
+            name=name,
+            email=email,
+            phone=phone,
+            password=make_password(password),
+            profile_photo=profile_photo,
+        )
 
-# home
-def home(request):
-
-    if "user_id" not in request.session:
+        messages.success(request, "Registration successful. Please login.")
         return redirect("login")
 
-    user = models.Register.objects.get(id=request.session["user_id"])
+    return render(request, "register.html")
+
+
+# Employee login
+def login_view(request):
+    if request.method == "POST":
+        email = request.POST.get("email", "").strip().lower()
+        password = request.POST.get("password", "")
+
+        try:
+            user = Register.objects.get(email=email)
+        except Register.DoesNotExist:
+            messages.error(request, "Invalid email or password.")
+            return redirect("login")
+
+        if user.status != "Active":
+            messages.error(request, "Your account is inactive. Please contact the administrator.")
+            return redirect("login")
+
+        if check_password(password, user.password):
+            request.session["user_id"] = user.id
+            request.session["email"] = user.email
+            return redirect("home")
+
+        messages.error(request, "Invalid email or password.")
+        return redirect("login")
+
+    return render(request, "login.html")
+
+
+# Employee home
+def home(request):
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return redirect("login")
+
+    try:
+        user = Register.objects.get(id=user_id)
+    except Register.DoesNotExist:
+        request.session.flush()
+        return redirect("login")
 
     return render(request, "home.html", {"user": user})
 
 
-
-# Logout emp
+# Employee logout
 def logout(request):
     request.session.flush()
-    return HttpResponse("<script>alert('Logout Successfully....!!');window.location.href='/index/';</script>")
+    messages.success(request, "Logout successful.")
+    return redirect("index")
 
-# dashboard
+
+# Employee dashboard
 def dashboard(request):
-
-    if "user_id" not in request.session:
+    user_id = request.session.get("user_id")
+    if not user_id:
         return redirect("login")
 
-    user = models.Register.objects.get(id=request.session["user_id"])
+    try:
+        user = Register.objects.get(id=user_id)
+    except Register.DoesNotExist:
+        request.session.flush()
+        return redirect("login")
 
     return render(request, "dashboard.html", {"user": user})
 
 
+# Admin login
+# Set these environment variables in a local .env/server environment.
+import os
 
-#admin credentials
-ADMIN_EMAIL = "admin@gmail.com"
-ADMIN_PASSWORD = "admin123"
+ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", "")
+ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "")
 
 
-#admin login
 def adminlogin(request):
+    if request.method == "POST":
+        email = request.POST.get("email", "").strip().lower()
+        password = request.POST.get("password", "")
 
-    if request.method=="POST":
-
-        email=request.POST.get("email")
-        password=request.POST.get("password")
-
-        if email==ADMIN_EMAIL and password==ADMIN_PASSWORD:
-
-            request.session["admin"]=email
-
+        if ADMIN_EMAIL and ADMIN_PASSWORD and email == ADMIN_EMAIL and password == ADMIN_PASSWORD:
+            request.session["admin"] = email
             return redirect("admin_dash")
 
-        else:
+        messages.error(request, "Invalid admin login.")
 
-            messages.error(request,"Invalid Admin Login")
-
-    return render(request,"adminlogin.html")
+    return render(request, "adminlogin.html")
 
 
-
-
+# Admin dashboard
 def admin_dash(request):
+    if not request.session.get("admin"):
+        return redirect("adminlogin")
 
     total_employees = Register.objects.count()
+    active_employees = Register.objects.filter(status="Active").count()
+    inactive_employees = Register.objects.filter(status="Inactive").count()
 
     context = {
-        'total_employees': total_employees
+        "total_employees": total_employees,
+        "active_employees": active_employees,
+        "inactive_employees": inactive_employees,
     }
 
-    return render(request, 'admin_dash.html', context)
+    return render(request, "admin_dash.html", context)
 
 
+# Admin logout
 def adminlogout(request):
-
-    if "admin" in request.session:
-
-        del request.session["admin"]
-
+    request.session.pop("admin", None)
     return redirect("adminlogin")
-
-
-
