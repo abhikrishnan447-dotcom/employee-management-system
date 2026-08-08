@@ -9,8 +9,6 @@ urlpatterns = [
     path("login/", views.login_view, name="login"),
     path("logout/", views.logout, name="logout"),
     path("dashboard/", views.dashboard, name="dashboard"),
-
-    # Admin
     path("adminlogin/", views.adminlogin, name="adminlogin"),
     path("admin/dashboard/", views.admin_dash, name="admin_dash"),
     path("admin/logout/", views.adminlogout, name="adminlogout"),
@@ -27,11 +25,11 @@ urlpatterns = [
     path("admin/messages/", views.admin_messages, name="admin_messages"),
     path("admin/settings/", views.admin_settings, name="admin_settings"),
     path("admin/profile/", views.admin_profile, name="admin_profile"),
-
-    # Employee
     path("tasks/", views.employee_tasks, name="employee_tasks"),
     path("tasks/<int:task_id>/", views.task_detail, name="task_detail"),
+    path("progress-updates/", views.progress_updates, name="progress_updates"),
     path("tasks/<int:task_id>/progress/", views.progress_update, name="progress_update"),
+    path("extension-requests/", views.extension_requests_employee, name="extension_requests_employee"),
     path("tasks/<int:task_id>/extension/", views.request_extension, name="request_extension"),
     path("notifications/", views.notifications, name="notifications"),
     path("messages/", views.messages_view, name="messages"),
