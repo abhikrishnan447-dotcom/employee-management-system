@@ -95,11 +95,9 @@ def dashboard(request):
     if not user:
         return redirect("login")
     tasks = user.tasks.all()
-    return render(request, "dashboard.html", {"user": user, "tasks": tasks, "pending": tasks.filter(status="Pending").count(), "progress": tasks.filter(status="In Progress").count(), "completed": tasks.filter(status="Completed").count()})
+    return render(request, "employee/dashboard.html", {"user": user, "tasks": tasks, "pending": tasks.filter(status="Pending").count(), "progress": tasks.filter(status="In Progress").count(), "completed": tasks.filter(status="Completed").count()})
 
 
-# Temporary demo credentials so you can test the custom admin immediately.
-# Change these later or move them to environment variables before deployment.
 ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", "admin@gmail.com")
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "admin123")
 
