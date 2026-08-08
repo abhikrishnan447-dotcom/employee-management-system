@@ -9,6 +9,13 @@
 <div class="col-sm-6 col-xl"><div class="card-pro stat-card"><div class="stat-icon"><i class="bi bi-check2-circle"></i></div><div><div class="stat-value">{{ completed_tasks }}</div><div class="stat-label">Completed</div></div></div></div>
 <div class="col-sm-6 col-xl"><div class="card-pro stat-card"><div class="stat-icon"><i class="bi bi-clock-history"></i></div><div><div class="stat-value">{{ pending_extensions }}</div><div class="stat-label">Extension Requests</div></div></div></div>
 </div>
+<div class="card-pro p-0 overflow-hidden mb-4">
+  <div class="section-head"><div><h5 class="mb-1">Employees</h5><p class="small text-secondary mb-0">Recently registered team members.</p></div><a href="{% url 'employee_management' %}" class="btn btn-sm btn-outline-primary">View All</a></div>
+  <div class="table-responsive"><table class="table employee-table align-middle mb-0"><thead><tr><th>Employee</th><th>Email</th><th>Department</th><th>Status</th><th class="text-end">Action</th></tr></thead><tbody>
+  {% for employee in employees %}<tr><td><div class="employee-cell">{% if employee.profile_photo %}<img class="employee-avatar" src="{{ employee.profile_photo.url }}" alt="{{ employee.name }}">{% else %}<div class="employee-avatar employee-avatar-placeholder"><i class="bi bi-person"></i></div>{% endif %}<div class="employee-name"><strong>{{ employee.name }}</strong><span>{{ employee.phone }}</span></div></div></td><td class="text-nowrap">{{ employee.email }}</td><td>{{ employee.department.name|default:'—' }}</td><td><span class="badge-soft">{{ employee.status }}</span></td><td class="text-end"><a class="btn btn-sm btn-outline-primary" href="{% url 'employee_edit' employee.id %}"><i class="bi bi-pencil-square"></i> Edit</a></td></tr>
+  {% empty %}<tr><td colspan="5" class="empty-state">No employees found.</td></tr>{% endfor %}
+  </tbody></table></div>
+</div>
 <div class="row g-4">
 <div class="col-lg-8"><div class="card-pro p-4 h-100"><div class="d-flex justify-content-between align-items-center mb-4"><div><h5 class="mb-1">Quick Actions</h5><p class="small text-secondary mb-0">Jump into the areas you manage most.</p></div></div><div class="row g-3">
 <div class="col-md-6"><a href="{% url 'employee_management' %}" class="card-pro p-3 d-flex gap-3 align-items-center h-100"><div class="stat-icon"><i class="bi bi-people"></i></div><div><strong>Employee Management</strong><div class="small text-secondary">Manage team members</div></div></a></div>
