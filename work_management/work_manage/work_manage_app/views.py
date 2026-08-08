@@ -179,8 +179,7 @@ def task_file_upload(request,task_id):
     task=get_object_or_404(employee_task_queryset(user),id=task_id)
     if request.method=="POST":
         uploaded=request.FILES.get("file")
-        if uploaded:
-            TaskFile.objects.create(task=task,employee=user,file=uploaded); messages.success(request,"Task file uploaded successfully.")
+        if uploaded: TaskFile.objects.create(task=task,employee=user,file=uploaded); messages.success(request,"Task file uploaded successfully.")
         else: messages.error(request,"Please select a file to upload.")
     return redirect("task_detail",task_id=task.id)
 def task_file_delete(request,file_id):
@@ -255,20 +254,16 @@ def messages_view(request):
     if not user: return redirect("login")
     if request.method=="POST":
         recipient_id=request.POST.get("recipient"); subject=request.POST.get("subject","").strip(); body=request.POST.get("body","").strip()
-        if recipient_id=="admin":
-            Message.objects.create(sender=user,recipient=None,subject=subject,body=body,is_admin_recipient=True); messages.success(request,"Message sent to Admin.")
+        if recipient_id=="admin": Message.objects.create(sender=user,recipient=None,subject=subject,body=body,is_admin_recipient=True); messages.success(request,"Message sent to Admin.")
         else:
-            recipient=get_object_or_404(Register,id=recipient_id,status="Active")
-            Message.objects.create(sender=user,recipient=recipient,subject=subject,body=body); Notification.objects.create(recipient=recipient,title="New message",message=f"New message from {user.name}."); messages.success(request,"Message sent.")
+            recipient=get_object_or_404(Register,id=recipient_id,status="Active"); Message.objects.create(sender=user,recipient=recipient,subject=subject,body=body); Notification.objects.create(recipient=recipient,title="New message",message=f"New message from {user.name}."); messages.success(request,"Message sent.")
         return redirect("messages")
-    received=list(user.received_messages.all()) + list(Message.objects.filter(recipient=user,is_admin_sender=True)); received.sort(key=lambda item:item.created_at,reverse=True)
-    sent=list(user.sent_messages.all())
+    received=list(user.received_messages.all()) + list(Message.objects.filter(recipient=user,is_admin_sender=True)); received.sort(key=lambda item:item.created_at,reverse=True); sent=list(user.sent_messages.all())
     return render(request,"employee/messages.html",{"user":user,"received":received,"sent":sent,"employees":Register.objects.filter(status="Active").exclude(id=user.id)})
 def clear_messages(request):
     user=current_employee(request)
     if not user: return redirect("login")
-    if request.method=="POST":
-        Message.objects.filter(Q(sender=user) | Q(recipient=user)).delete(); messages.success(request,"Messages cleared.")
+    if request.method=="POST": Message.objects.filter(Q(sender=user) | Q(recipient=user)).delete(); messages.success(request,"Messages cleared.")
     return redirect("messages")
 def delete_message(request,message_id):
     user=current_employee(request)
@@ -295,22 +290,28 @@ def reports(request):
     if not is_admin(request): return redirect("adminlogin")
     tasks=Task.objects.all(); employees=Register.objects.filter(status="Active"); employee_progress=[]
     for employee in employees:
-        employee_tasks=tasks.filter(Q(assigned_employees=employee) | Q(assigned_employees__isnull=True, assigned_to=employee)).distinct()
-        avg=employee_tasks.aggregate(value=Avg("progress"))["value"] or 0; employee_progress.append({"employee":employee,"percentage":round(avg)})
+        employee_tasks=tasks.filter(Q(assigned_employees=employee) | Q(assigned_employees__isnull=True, assigned_to=employee)).distinct(); avg=employee_tasks.aggregate(value=Avg("progress"))["value"] or 0; employee_progress.append({"employee":employee,"percentage":round(avg)})
     return render(request,"admin/reports_v2.html",{"total":tasks.count(),"pending":tasks.filter(status="Pending").count(),"progress":tasks.filter(status="In Progress").count(),"completed":tasks.filter(status="Completed").count(),"overdue":tasks.filter(deadline__lt=date.today()).exclude(status="Completed").count(),"by_department":Department.objects.annotate(task_count=Count("tasks")),"employee_progress":employee_progress})
 def admin_notifications(request):
     if not is_admin(request): return redirect("adminlogin")
     return render(request,"admin/notifications.html",{"notifications":Notification.objects.select_related("recipient")})
+def admin_clear_notifications(request):
+    if not is_admin(request): return redirect("adminlogin")
+    if request.method=="POST": Notification.objects.all().delete(); messages.success(request,"Administrator notifications cleared.")
+    return redirect("admin_notifications")
 def admin_messages(request):
     if not is_admin(request): return redirect("adminlogin")
     if request.method=="POST":
-        recipient=get_object_or_404(Register,id=request.POST.get("recipient"),status="Active"); subject=request.POST.get("subject","").strip(); body=request.POST.get("body","").strip()
-        Message.objects.create(sender=None,recipient=recipient,subject=subject,body=body,is_admin_sender=True); Notification.objects.create(recipient=recipient,title="New message from Admin",message="The administrator sent you a new message.")
+        recipient=get_object_or_404(Register,id=request.POST.get("recipient"),status="Active"); subject=request.POST.get("subject","").strip(); body=request.POST.get("body","").strip(); Message.objects.create(sender=None,recipient=recipient,subject=subject,body=body,is_admin_sender=True); Notification.objects.create(recipient=recipient,title="New message from Admin",message="The administrator sent you a new message.")
         try: send_mail("WorkSphere - Message from Admin",f"Hello {recipient.name},\n\n{body}\n\nPlease login to WorkSphere to reply.",None,[recipient.email],fail_silently=False)
         except Exception: pass
         messages.success(request,"Message sent to employee."); return redirect("admin_messages")
     items=Message.objects.filter(Q(is_admin_recipient=True) | Q(is_admin_sender=True)).select_related("sender","recipient").order_by("-created_at")
     return render(request,"admin/messages.html",{"messages_list":items,"employees":Register.objects.filter(status="Active")})
+def admin_clear_messages(request):
+    if not is_admin(request): return redirect("adminlogin")
+    if request.method=="POST": Message.objects.filter(Q(is_admin_recipient=True) | Q(is_admin_sender=True)).delete(); messages.success(request,"Administrator messages cleared.")
+    return redirect("admin_messages")
 def admin_message_reply(request,message_id):
     if not is_admin(request): return redirect("admin_messages")
     original=get_object_or_404(Message,id=message_id); recipient=original.sender if original.sender_id else original.recipient
