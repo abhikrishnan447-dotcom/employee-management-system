@@ -1,0 +1,18 @@
+{% extends 'employee/base.html' %}
+{% block title %}Progress Updates | WorkSphere{% endblock %}
+{% block content %}
+<div class="page-title mb-4"><h1>Progress Updates</h1><p>Update the progress of your assigned tasks.</p></div>
+<div class="row g-4">
+{% for task in tasks %}
+<div class="col-lg-6"><div class="card-pro p-4 h-100">
+<div class="d-flex justify-content-between align-items-start"><div><h5>{{ task.title }}</h5><p class="text-secondary mb-2">Deadline: {{ task.deadline }}</p></div><span class="badge">{{ task.progress }}%</span></div>
+<div class="progress mb-3"><div class="progress-bar" style="width:{{ task.progress }}%"></div></div>
+<form method="post" action="{% url 'progress_update' task.id %}">{% csrf_token %}
+<label class="form-label">Progress</label><input class="form-control mb-3" type="number" name="progress" min="0" max="100" value="{{ task.progress }}" required>
+<label class="form-label">Update note</label><textarea class="form-control mb-3" name="note" rows="3" placeholder="What have you completed?"></textarea>
+<button class="btn btn-primary"><i class="bi bi-graph-up-arrow"></i> Save Progress</button>
+</form></div></div>
+{% empty %}<div class="col-12"><div class="card-pro p-4 text-secondary">No tasks assigned yet.</div></div>{% endfor %}
+</div>
+<div class="card-pro p-4 mt-4"><h5>Update History</h5><div class="table-responsive"><table class="table align-middle"><thead><tr><th>Task</th><th>Progress</th><th>Note</th><th>Updated</th></tr></thead><tbody>{% for update in updates %}<tr><td>{{ update.task.title }}</td><td>{{ update.progress }}%</td><td>{{ update.note|default:'—' }}</td><td>{{ update.created_at|date:'d M Y H:i' }}</td></tr>{% empty %}<tr><td colspan="4" class="text-secondary">No progress updates yet.</td></tr>{% endfor %}</tbody></table></div></div>
+{% endblock %}
