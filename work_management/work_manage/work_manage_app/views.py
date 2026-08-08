@@ -6,6 +6,9 @@ from django.core.mail import send_mail
 from .models import Register, Department, EmployeeDepartment, Task, ExtensionRequest, ProgressUpdate, Notification
 import os
 
+def is_admin(request):
+    return bool(request.session.get("admin"))
+
 # ... existing functions above remain unchanged ...
 
 def employee_edit(request, employee_id):
