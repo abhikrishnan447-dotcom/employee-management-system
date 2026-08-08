@@ -40,6 +40,7 @@ TEMPLATES = [{
         "django.template.context_processors.request",
         "django.contrib.auth.context_processors.auth",
         "django.contrib.messages.context_processors.messages",
+        "work_manage_app.context_processors.admin_badges",
     ]},
 }]
 WSGI_APPLICATION = "work_manage.wsgi.application"
