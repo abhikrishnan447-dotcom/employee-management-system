@@ -76,12 +76,13 @@ def adminlogin(request):
 def is_admin(request): return bool(request.session.get("admin"))
 def admin_dash(request):
     if not is_admin(request): return redirect("adminlogin")
-    return render(request, "admin/dashboard.html", {"total_employees": Register.objects.count(), "active_employees": Register.objects.filter(status="Active").count(), "total_tasks": Task.objects.count(), "pending_extensions": ExtensionRequest.objects.filter(status="Pending").count(), "completed_tasks": Task.objects.filter(status="Completed").count()})
+    employees = Register.objects.select_related("department").order_by("name")
+    return render(request, "admin/dashboard.html", {"total_employees": employees.count(), "active_employees": employees.filter(status="Active").count(), "total_tasks": Task.objects.count(), "pending_extensions": ExtensionRequest.objects.filter(status="Pending").count(), "completed_tasks": Task.objects.filter(status="Completed").count(), "employees": employees[:8]})
 def adminlogout(request): request.session.pop("admin", None); return redirect("adminlogin")
 
 def employee_management(request):
     if not is_admin(request): return redirect("adminlogin")
-    return render(request, "admin/employees.html", {"employees": Register.objects.all().order_by("name"), "departments": Department.objects.all()})
+    return render(request, "admin/employees.html", {"employees": Register.objects.select_related("department").all().order_by("name"), "departments": Department.objects.all()})
 def employee_edit(request, employee_id):
     if not is_admin(request): return redirect("adminlogin")
     employee = get_object_or_404(Register, id=employee_id)
@@ -102,7 +103,7 @@ def department_delete(request, department_id):
     return redirect("department_management")
 def task_management(request):
     if not is_admin(request): return redirect("adminlogin")
-    return render(request, "admin/tasks.html", {"tasks": Task.objects.select_related("assigned_to", "department"), "employees": Register.objects.filter(status="Active"), "departments": Department.objects.all()})
+    return render(request, "admin/tasks.html", {"tasks": Task.objects.select_related("assigned_to", "department"), "employees": Register.objects.filter(status="Active").order_by("name"), "departments": Department.objects.all().order_by("name")})
 
 def assign_task(request):
     if not is_admin(request): return redirect("adminlogin")
