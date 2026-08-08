@@ -79,13 +79,7 @@ def forgot_password(request):
             token = default_token_generator.make_token(user)
             reset_url = request.build_absolute_uri(f"/reset-password/{uid}/{token}/")
             try:
-                send_mail(
-                    "WorkSphere - Reset your password",
-                    f"Hello {user.name},\n\nUse the link below to create a new password:\n\n{reset_url}\n\nIf you did not request this, you can ignore this email.",
-                    None,
-                    [user.email],
-                    fail_silently=False,
-                )
+                send_mail("WorkSphere - Reset your password", f"Hello {user.name},\n\nUse the link below to create a new password:\n\n{reset_url}\n\nIf you did not request this, you can ignore this email.", None, [user.email], fail_silently=False)
                 messages.success(request, "A password reset link has been sent to your registered email address.")
             except Exception:
                 messages.error(request, "Unable to send the reset email. Please check the email server configuration.")
@@ -101,11 +95,9 @@ def reset_password(request, uidb64, token):
         user = Register.objects.get(pk=user_id)
     except (TypeError, ValueError, OverflowError, Register.DoesNotExist):
         user = None
-
     if not user or not default_token_generator.check_token(user, token):
         messages.error(request, "This password reset link is invalid or has expired.")
         return redirect("forgot_password")
-
     if request.method == "POST":
         password = request.POST.get("password", "")
         confirm_password = request.POST.get("confirm_password", "")
@@ -143,7 +135,7 @@ def dashboard(request):
     if not user:
         return redirect("login")
     tasks = user.tasks.all()
-    return render(request, "dashboard.html", {"user": user, "tasks": tasks, "pending": tasks.filter(status="Pending").count(), "progress": tasks.filter(status="In Progress").count(), "completed": tasks.filter(status="Completed").count()})
+    return render(request, "employee/dashboard.html", {"user": user, "tasks": tasks, "pending": tasks.filter(status="Pending").count(), "progress": tasks.filter(status="In Progress").count(), "completed": tasks.filter(status="Completed").count()})
 
 
 ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", "")
@@ -168,14 +160,7 @@ def is_admin(request):
 def admin_dash(request):
     if not is_admin(request):
         return redirect("adminlogin")
-    return render(request, "admin/dashboard.html", {
-        "total_employees": Register.objects.count(),
-        "active_employees": Register.objects.filter(status="Active").count(),
-        "total_tasks": Task.objects.count(),
-        "pending_extensions": ExtensionRequest.objects.filter(status="Pending").count(),
-        "completed_tasks": Task.objects.filter(status="Completed").count(),
-        "employees": Register.objects.all().select_related("department").order_by("name")[:8],
-    })
+    return render(request, "admin/dashboard.html", {"total_employees": Register.objects.count(), "active_employees": Register.objects.filter(status="Active").count(), "total_tasks": Task.objects.count(), "pending_extensions": ExtensionRequest.objects.filter(status="Pending").count(), "completed_tasks": Task.objects.filter(status="Completed").count(), "employees": Register.objects.all().select_related("department").order_by("name")[:8]})
 
 
 def adminlogout(request):
@@ -209,8 +194,7 @@ def department_management(request):
     if request.method == "POST":
         name = request.POST.get("name", "").strip()
         description = request.POST.get("description", "").strip()
-        if name:
-            Department.objects.get_or_create(name=name, defaults={"description": description})
+        if name: Department.objects.get_or_create(name=name, defaults={"description": description})
         return redirect("department_management")
     return render(request, "admin/departments.html", {"departments": Department.objects.annotate(employee_count=Count("employees"))})
 
@@ -273,10 +257,8 @@ def progress_update(request, task_id):
     if not user: return redirect("login")
     task = get_object_or_404(Task, id=task_id, assigned_to=user)
     if request.method == "POST":
-        try:
-            progress = max(0, min(100, int(request.POST.get("progress", 0))))
-        except (TypeError, ValueError):
-            progress = 0
+        try: progress = max(0, min(100, int(request.POST.get("progress", 0))))
+        except (TypeError, ValueError): progress = 0
         ProgressUpdate.objects.create(task=task, employee=user, progress=progress, note=request.POST.get("note", "").strip())
         task.progress = progress
         task.status = "Completed" if progress == 100 else "In Progress" if progress > 0 else "Pending"
