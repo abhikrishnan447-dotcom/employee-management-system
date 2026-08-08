@@ -1,6 +1,5 @@
 from django.urls import path
 from . import views
-from .admin_actions import employee_delete
 
 urlpatterns = [
     path("", views.index, name="index"),
@@ -17,11 +16,13 @@ urlpatterns = [
     path("admin/logout/", views.adminlogout, name="adminlogout"),
     path("admin/employees/", views.employee_management, name="employee_management"),
     path("admin/employees/<int:employee_id>/edit/", views.employee_edit, name="employee_edit"),
-    path("admin/employees/<int:employee_id>/delete/", employee_delete, name="employee_delete"),
+    path("admin/employees/<int:employee_id>/delete/", views.employee_delete, name="employee_delete"),
     path("admin/departments/", views.department_management, name="department_management"),
     path("admin/departments/<int:department_id>/delete/", views.department_delete, name="department_delete"),
     path("admin/tasks/", views.task_management, name="task_management"),
     path("admin/tasks/assign/", views.assign_task, name="assign_task"),
+    path("admin/tasks/<int:task_id>/edit/", views.task_edit, name="task_edit"),
+    path("admin/tasks/<int:task_id>/delete/", views.task_delete, name="task_delete"),
     path("admin/extensions/", views.extension_requests, name="extension_requests"),
     path("admin/extensions/<int:request_id>/<str:action>/", views.extension_action, name="extension_action"),
     path("admin/reports/", views.reports, name="reports"),
