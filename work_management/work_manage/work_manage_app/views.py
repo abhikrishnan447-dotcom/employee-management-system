@@ -294,7 +294,10 @@ def reports(request):
     return render(request,"admin/reports_v2.html",{"total":tasks.count(),"pending":tasks.filter(status="Pending").count(),"progress":tasks.filter(status="In Progress").count(),"completed":tasks.filter(status="Completed").count(),"overdue":tasks.filter(deadline__lt=date.today()).exclude(status="Completed").count(),"by_department":Department.objects.annotate(task_count=Count("tasks")),"employee_progress":employee_progress})
 def admin_notifications(request):
     if not is_admin(request): return redirect("adminlogin")
-    return render(request,"admin/notifications.html",{"notifications":Notification.objects.select_related("recipient")})
+    notifications_qs=Notification.objects.select_related("recipient").order_by("-created_at")
+    # Opening the notifications page counts as reading the notifications.
+    notifications_qs.filter(is_read=False).update(is_read=True)
+    return render(request,"admin/notifications.html",{"notifications":notifications_qs})
 def admin_clear_notifications(request):
     if not is_admin(request): return redirect("adminlogin")
     if request.method=="POST": Notification.objects.all().delete(); messages.success(request,"Administrator notifications cleared.")
@@ -307,6 +310,8 @@ def admin_messages(request):
         except Exception: pass
         messages.success(request,"Message sent to employee."); return redirect("admin_messages")
     items=Message.objects.filter(Q(is_admin_recipient=True) | Q(is_admin_sender=True)).select_related("sender","recipient").order_by("-created_at")
+    # Only incoming messages addressed to the administrator become read here.
+    Message.objects.filter(is_admin_recipient=True,is_read=False).update(is_read=True)
     return render(request,"admin/messages.html",{"messages_list":items,"employees":Register.objects.filter(status="Active")})
 def admin_clear_messages(request):
     if not is_admin(request): return redirect("adminlogin")
