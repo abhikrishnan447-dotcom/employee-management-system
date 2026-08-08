@@ -1,6 +1,7 @@
 from django.urls import path
 from . import views
 from . import fixes
+from . import notification_views
 
 urlpatterns = [
     path("", views.index, name="index"),
@@ -29,8 +30,8 @@ urlpatterns = [
     path("admin/extensions/", views.extension_requests, name="extension_requests"),
     path("admin/extensions/<int:request_id>/<str:action>/", views.extension_action, name="extension_action"),
     path("admin/reports/", views.reports, name="reports"),
-    path("admin/notifications/", views.admin_notifications, name="admin_notifications"),
-    path("admin/notifications/clear/", views.admin_clear_notifications, name="admin_clear_notifications"),
+    path("admin/notifications/", notification_views.admin_notifications, name="admin_notifications"),
+    path("admin/notifications/clear/", notification_views.admin_clear_notifications, name="admin_clear_notifications"),
     path("admin/messages/", views.admin_messages, name="admin_messages"),
     path("admin/messages/clear/", views.admin_clear_messages, name="admin_clear_messages"),
     path("admin/messages/<int:message_id>/reply/", views.admin_message_reply, name="admin_message_reply"),
@@ -47,8 +48,8 @@ urlpatterns = [
     path("tasks/<int:task_id>/extension/", views.request_extension, name="request_extension"),
     path("extension-requests/<int:request_id>/edit/", views.extension_edit, name="extension_edit"),
     path("extension-requests/<int:request_id>/delete/", views.extension_delete, name="extension_delete"),
-    path("notifications/", views.notifications, name="notifications"),
-    path("notifications/clear/", views.clear_notifications, name="clear_notifications"),
+    path("notifications/", notification_views.notifications, name="notifications"),
+    path("notifications/clear/", notification_views.clear_notifications, name="clear_notifications"),
     path("messages/", views.messages_view, name="messages"),
     path("messages/clear/", views.clear_messages, name="clear_messages"),
     path("messages/<int:message_id>/delete/", views.delete_message, name="delete_message"),
