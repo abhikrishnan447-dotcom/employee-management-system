@@ -5,25 +5,27 @@ from django.contrib import messages
 from django.core.mail import send_mail
 from django.shortcuts import get_object_or_404, redirect
 
-from .models import Message, Notification, ProgressUpdate, Register, TaskFile
+from .models import Message, Notification, ProgressUpdate, TaskFile
 from .views import ADMIN_EMAIL, current_employee, employee_task_queryset
-
-MAX_ZIP_SIZE = 50 * 1024 * 1024
 
 
 def _task_employee_progress(task, employee):
-    latest = task.updates.filter(employee=employee).first()
+    latest = task.updates.filter(employee=employee).order_by("-created_at").first()
     return latest.progress if latest else 0
 
 
 def _refresh_task_progress(task):
     employees = list(task.assigned_employees.all())
-    if not employees:
+    if not employees and task.assigned_to_id:
         employees = [task.assigned_to]
 
     values = [_task_employee_progress(task, employee) for employee in employees]
     task.progress = round(sum(values) / len(values)) if values else 0
-    task.status = "Completed" if values and all(value == 100 for value in values) else ("In Progress" if any(value > 0 for value in values) else "Pending")
+    task.status = (
+        "Completed" if values and all(value == 100 for value in values)
+        else "In Progress" if any(value > 0 for value in values)
+        else "Pending"
+    )
     task.save(update_fields=["progress", "status"])
     return task.progress, task.status
 
@@ -60,10 +62,17 @@ def progress_update_fixed(request, task_id):
                 is_admin_recipient=True,
                 is_read=False,
             )
-            try:
-                send_mail(f"WorkSphere - {subject}", body, None, [ADMIN_EMAIL], fail_silently=False)
-            except Exception:
-                pass
+            if ADMIN_EMAIL:
+                try:
+                    send_mail(
+                        f"WorkSphere - {subject}",
+                        body,
+                        None,
+                        [ADMIN_EMAIL],
+                        fail_silently=False,
+                    )
+                except Exception:
+                    pass
             messages.success(request, "Task completed. The administrator has been notified.")
         else:
             messages.success(request, "Progress updated successfully.")
@@ -117,13 +126,8 @@ def task_file_upload_fixed(request, task_id):
             messages.error(request, "Please select a ZIP file to upload.")
             return redirect("task_detail", task_id=task.id)
 
-        suffix = Path(uploaded.name).suffix.lower()
-        if suffix != ".zip":
+        if Path(uploaded.name).suffix.lower() != ".zip":
             messages.error(request, "Only ZIP files are allowed.")
-            return redirect("task_detail", task_id=task.id)
-
-        if uploaded.size > MAX_ZIP_SIZE:
-            messages.error(request, "ZIP file must be 50 MB or smaller.")
             return redirect("task_detail", task_id=task.id)
 
         try:
