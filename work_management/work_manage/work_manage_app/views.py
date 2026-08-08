@@ -4,6 +4,7 @@ from datetime import date
 from django.contrib import messages
 from django.contrib.auth.hashers import check_password, make_password
 from django.db.models import Count
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 
 from .models import Department, EmployeeDepartment, ExtensionRequest, Message, Notification, ProgressUpdate, Register, Task
@@ -61,6 +62,10 @@ def register(request):
             return redirect("login")
 
     return render(request, "register.html", {"departments": departments})
+
+
+def registration_departments(request):
+    return JsonResponse({"departments": list(Department.objects.values("id", "name"))})
 
 
 def login_view(request):
