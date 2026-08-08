@@ -51,7 +51,7 @@ def reset_password(request,uidb64,token):
     if not user or not default_token_generator.check_token(user,token): messages.error(request,"This password reset link is invalid or has expired."); return redirect("forgot_password")
     if request.method=="POST":
         password=request.POST.get("password",""); confirm_password=request.POST.get("confirm_password","")
-        if len(password)<8: messages.error(request,"Password must contain at least 8 characters.")
+        if len(password)<8: messages.error(request,"Passwords must contain at least 8 characters.")
         elif password!=confirm_password: messages.error(request,"Passwords do not match.")
         else: user.password=make_password(password); user.save(update_fields=["password"]); messages.success(request,"Password changed successfully. You can now login."); return redirect("login")
     return render(request,"reset_password.html",{"email":user.email})
@@ -254,16 +254,35 @@ def messages_view(request):
     if not user: return redirect("login")
     if request.method=="POST":
         recipient_id=request.POST.get("recipient"); subject=request.POST.get("subject","").strip(); body=request.POST.get("body","").strip()
-        if recipient_id=="admin": Message.objects.create(sender=user,recipient=None,subject=subject,body=body,is_admin_recipient=True); messages.success(request,"Message sent to Admin.")
+        if not subject or not body: messages.error(request,"Please enter a subject and message."); return redirect("messages")
+        if recipient_id=="admin":
+            Message.objects.create(sender=user,recipient=None,subject=subject,body=body,is_admin_recipient=True,is_read=False)
+            messages.success(request,"Message sent to Admin.")
         else:
-            recipient=get_object_or_404(Register,id=recipient_id,status="Active"); Message.objects.create(sender=user,recipient=recipient,subject=subject,body=body); Notification.objects.create(recipient=recipient,title="New message",message=f"New message from {user.name}."); messages.success(request,"Message sent.")
+            recipient=get_object_or_404(Register,id=recipient_id,status="Active")
+            if recipient.id==user.id:
+                messages.error(request,"You cannot send a message to yourself.")
+                return redirect("messages")
+            Message.objects.create(sender=user,recipient=recipient,subject=subject,body=body,is_read=False)
+            Notification.objects.create(recipient=recipient,title="New message",message=f"New message from {user.name}.")
+            messages.success(request,f"Message sent to {recipient.name}.")
         return redirect("messages")
-    received=list(user.received_messages.all()) + list(Message.objects.filter(recipient=user,is_admin_sender=True)); received.sort(key=lambda item:item.created_at,reverse=True); sent=list(user.sent_messages.all())
+
+    # Inbox contains every message whose recipient is this employee.
+    # This explicitly covers both teammate messages and administrator replies.
+    received_qs=Message.objects.filter(recipient_id=user.id).select_related("sender").order_by("-created_at")
+    received=list(received_qs)
+    sent=list(Message.objects.filter(sender_id=user.id).select_related("recipient").order_by("-created_at"))
+
+    # Opening the inbox marks only received messages as read, so the badge
+    # disappears after the employee actually visits the Messages page.
+    received_qs.filter(is_read=False).update(is_read=True)
+
     return render(request,"employee/messages.html",{"user":user,"received":received,"sent":sent,"employees":Register.objects.filter(status="Active").exclude(id=user.id)})
 def clear_messages(request):
     user=current_employee(request)
     if not user: return redirect("login")
-    if request.method=="POST": Message.objects.filter(Q(sender=user) | Q(recipient=user)).delete(); messages.success(request,"Messages cleared.")
+    if request.method=="POST": Message.objects.filter(Q(sender_id=user.id) | Q(recipient_id=user.id)).delete(); messages.success(request,"Messages cleared.")
     return redirect("messages")
 def delete_message(request,message_id):
     user=current_employee(request)
@@ -295,7 +314,6 @@ def reports(request):
 def admin_notifications(request):
     if not is_admin(request): return redirect("adminlogin")
     notifications_qs=Notification.objects.select_related("recipient").order_by("-created_at")
-    # Opening the notifications page counts as reading the notifications.
     notifications_qs.filter(is_read=False).update(is_read=True)
     return render(request,"admin/notifications.html",{"notifications":notifications_qs})
 def admin_clear_notifications(request):
@@ -310,7 +328,6 @@ def admin_messages(request):
         except Exception: pass
         messages.success(request,"Message sent to employee."); return redirect("admin_messages")
     items=Message.objects.filter(Q(is_admin_recipient=True) | Q(is_admin_sender=True)).select_related("sender","recipient").order_by("-created_at")
-    # Only incoming messages addressed to the administrator become read here.
     Message.objects.filter(is_admin_recipient=True,is_read=False).update(is_read=True)
     return render(request,"admin/messages.html",{"messages_list":items,"employees":Register.objects.filter(status="Active")})
 def admin_clear_messages(request):
@@ -330,6 +347,3 @@ def admin_task_files(request):
 def admin_settings(request):
     if not is_admin(request): return redirect("adminlogin")
     return render(request,"admin/settings.html")
-def admin_profile(request):
-    if not is_admin(request): return redirect("adminlogin")
-    return render(request,"admin/profile.html",{"admin_email":request.session.get("admin")})
