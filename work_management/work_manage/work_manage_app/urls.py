@@ -4,6 +4,7 @@ from . import fixes
 from . import password_reset
 from . import login_page
 from . import registration_fix
+from . import message_fix
 
 urlpatterns = [
     # ==============================
@@ -47,7 +48,7 @@ urlpatterns = [
     # ==============================
     path("notifications/", views.notifications, name="notifications"),
     path("notifications/clear/", views.clear_notifications, name="clear_notifications"),
-    path("messages/", views.messages_view, name="messages"),
+    path("messages/", message_fix.messages_view_fixed, name="messages"),
     path("messages/clear/", views.clear_messages, name="clear_messages"),
     path("messages/<int:message_id>/delete/", views.delete_message, name="delete_message"),
 
