@@ -1,7 +1,7 @@
 {% extends 'workspace/admin_base.html' %}
 {% block title %}Tasks | WorkSphere{% endblock %}
 {% block content %}
-<div class="page-title mb-4"><div class="d-flex justify-content-between align-items-center gap-3"><div><h1>Task Management</h1><p>Assign one task to multiple employees and manage existing tasks.</p></div><a href="{% url 'admin_task_files' %}" class="btn btn-outline-primary ms-auto flex-shrink-0"><i class="bi bi-folder2-open"></i> Employee Files</a></div></div>
+<div class="page-title mb-4" style="width:100%;"><div class="d-flex justify-content-between align-items-start gap-3 w-100"><div><h1>Task Management</h1><p>Assign one task to multiple employees and manage existing tasks.</p></div><a href="{% url 'admin_task_files' %}" class="btn btn-outline-primary ms-auto flex-shrink-0" style="margin-left:auto !important; white-space:nowrap;"><i class="bi bi-folder2-open"></i> Employee Files</a></div></div>
 <div class="card-pro p-4 mb-4"><h5 class="mb-3">Assign New Task</h5>
 <form method="post" action="{% url 'assign_task' %}" class="row g-3">{% csrf_token %}
 <div class="col-md-6"><label class="form-label">Task Title</label><input class="form-control" name="title" required></div>
