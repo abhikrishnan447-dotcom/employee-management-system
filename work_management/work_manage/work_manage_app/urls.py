@@ -3,6 +3,7 @@ from . import views
 from . import fixes
 from . import password_reset
 from . import login_page
+from . import registration_fix
 
 urlpatterns = [
     # ==============================
@@ -14,7 +15,7 @@ urlpatterns = [
     # ==============================
     # EMPLOYEE REGISTRATION & LOGIN
     # ==============================
-    path("register/", views.register, name="register"),
+    path("register/", registration_fix.register, name="register"),
     path("register/departments/", views.registration_departments, name="registration_departments"),
     path("login/", login_page.employee_login, name="login"),
     path("forgot-password/", password_reset.forgot_password, name="forgot_password"),
