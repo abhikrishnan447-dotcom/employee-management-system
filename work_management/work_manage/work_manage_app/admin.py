@@ -3,6 +3,9 @@ from django.contrib import admin
 from .models import Department, EmployeeDepartment, ExtensionRequest, Message, Notification, ProgressUpdate, Register, Task
 
 
+# ==============================
+# EMPLOYEE / REGISTER ADMIN
+# ==============================
 @admin.register(Register)
 class RegisterAdmin(admin.ModelAdmin):
     list_display = ("name", "email", "phone", "status")
@@ -10,17 +13,26 @@ class RegisterAdmin(admin.ModelAdmin):
     search_fields = ("name", "email", "phone")
 
 
+# ==============================
+# DEPARTMENT ADMIN
+# ==============================
 @admin.register(Department)
 class DepartmentAdmin(admin.ModelAdmin):
     search_fields = ("name",)
 
 
+# ==============================
+# EMPLOYEE DEPARTMENT ADMIN
+# ==============================
 @admin.register(EmployeeDepartment)
 class EmployeeDepartmentAdmin(admin.ModelAdmin):
     list_display = ("employee", "department", "designation")
     list_filter = ("department",)
 
 
+# ==============================
+# TASK ADMIN
+# ==============================
 @admin.register(Task)
 class TaskAdmin(admin.ModelAdmin):
     list_display = ("title", "assigned_to", "deadline", "status", "priority", "progress")
@@ -28,23 +40,35 @@ class TaskAdmin(admin.ModelAdmin):
     search_fields = ("title", "assigned_to__name")
 
 
+# ==============================
+# PROGRESS UPDATE ADMIN
+# ==============================
 @admin.register(ProgressUpdate)
 class ProgressUpdateAdmin(admin.ModelAdmin):
     list_display = ("task", "employee", "progress", "created_at")
 
 
+# ==============================
+# EXTENSION REQUEST ADMIN
+# ==============================
 @admin.register(ExtensionRequest)
 class ExtensionRequestAdmin(admin.ModelAdmin):
     list_display = ("task", "employee", "requested_deadline", "status", "created_at")
     list_filter = ("status",)
 
 
+# ==============================
+# NOTIFICATION ADMIN
+# ==============================
 @admin.register(Notification)
 class NotificationAdmin(admin.ModelAdmin):
     list_display = ("title", "recipient", "is_read", "created_at")
     list_filter = ("is_read",)
 
 
+# ==============================
+# MESSAGE ADMIN
+# ==============================
 @admin.register(Message)
 class MessageAdmin(admin.ModelAdmin):
     list_display = ("subject", "sender", "recipient", "is_read", "created_at")
