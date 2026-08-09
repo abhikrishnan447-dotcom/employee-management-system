@@ -1,10 +1,5 @@
 from django.urls import path
 from . import views
-from . import fixes
-from . import password_reset
-from . import login_page
-from . import registration_fix
-from . import message_fix
 
 urlpatterns = [
     # ==============================
@@ -16,10 +11,10 @@ urlpatterns = [
     # ==============================
     # EMPLOYEE REGISTRATION & LOGIN
     # ==============================
-    path("register/", registration_fix.register, name="register"),
+    path("register/", views.register_fixed, name="register"),
     path("register/departments/", views.registration_departments, name="registration_departments"),
-    path("login/", login_page.employee_login, name="login"),
-    path("forgot-password/", password_reset.forgot_password, name="forgot_password"),
+    path("login/", views.employee_login, name="login"),
+    path("forgot-password/", views.forgot_password, name="forgot_password"),
     path("logout/", views.logout, name="logout"),
 
     # ==============================
@@ -29,11 +24,11 @@ urlpatterns = [
     path("tasks/", views.employee_tasks, name="employee_tasks"),
     path("tasks/<int:task_id>/", views.task_detail, name="task_detail"),
     path("progress-updates/", views.progress_updates, name="progress_updates"),
-    path("tasks/<int:task_id>/progress/", fixes.progress_update_fixed, name="progress_update"),
-    path("tasks/<int:task_id>/upload-file/", fixes.task_file_upload_fixed, name="task_file_upload"),
+    path("tasks/<int:task_id>/progress/", views.progress_update_fixed, name="progress_update"),
+    path("tasks/<int:task_id>/upload-file/", views.task_file_upload_fixed, name="task_file_upload"),
     path("task-files/<int:file_id>/delete/", views.task_file_delete, name="task_file_delete"),
-    path("progress-updates/<int:update_id>/edit/", fixes.progress_edit_fixed, name="progress_edit"),
-    path("progress-updates/<int:update_id>/delete/", fixes.progress_delete_fixed, name="progress_delete"),
+    path("progress-updates/<int:update_id>/edit/", views.progress_edit_fixed, name="progress_edit"),
+    path("progress-updates/<int:update_id>/delete/", views.progress_delete_fixed, name="progress_delete"),
 
     # ==============================
     # EMPLOYEE EXTENSION REQUESTS
@@ -48,7 +43,7 @@ urlpatterns = [
     # ==============================
     path("notifications/", views.notifications, name="notifications"),
     path("notifications/clear/", views.clear_notifications, name="clear_notifications"),
-    path("messages/", message_fix.messages_view_fixed, name="messages"),
+    path("messages/", views.messages_view_fixed, name="messages"),
     path("messages/clear/", views.clear_messages, name="clear_messages"),
 
     # ==============================
