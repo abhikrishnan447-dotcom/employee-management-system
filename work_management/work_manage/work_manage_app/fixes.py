@@ -9,11 +9,17 @@ from .models import Message, Notification, ProgressUpdate, TaskFile
 from .views import ADMIN_EMAIL, current_employee, employee_task_queryset
 
 
+# ============================================================
+# TASK PROGRESS - GET LATEST EMPLOYEE PROGRESS
+# ============================================================
 def _task_employee_progress(task, employee):
     latest = task.updates.filter(employee=employee).order_by("-created_at").first()
     return latest.progress if latest else 0
 
 
+# ============================================================
+# TASK PROGRESS - REFRESH OVERALL TASK STATUS
+# ============================================================
 def _refresh_task_progress(task):
     employees = list(task.assigned_employees.all())
     if not employees and task.assigned_to_id:
@@ -30,6 +36,9 @@ def _refresh_task_progress(task):
     return task.progress, task.status
 
 
+# ============================================================
+# EMPLOYEE - UPDATE TASK PROGRESS
+# ============================================================
 def progress_update_fixed(request, task_id):
     user = current_employee(request)
     if not user:
@@ -51,6 +60,7 @@ def progress_update_fixed(request, task_id):
         task.refresh_from_db()
         _, status = _refresh_task_progress(task)
 
+        # ADMIN - TASK COMPLETION NOTIFICATION
         if status == "Completed":
             subject = f"Task completed: {task.title}"
             body = f"All assigned employees have completed the task '{task.title}'."
@@ -80,6 +90,9 @@ def progress_update_fixed(request, task_id):
     return redirect("progress_updates")
 
 
+# ============================================================
+# EMPLOYEE - EDIT PROGRESS UPDATE
+# ============================================================
 def progress_edit_fixed(request, update_id):
     user = current_employee(request)
     if not user:
@@ -99,6 +112,9 @@ def progress_edit_fixed(request, update_id):
     return redirect("progress_updates")
 
 
+# ============================================================
+# EMPLOYEE - DELETE PROGRESS UPDATE
+# ============================================================
 def progress_delete_fixed(request, update_id):
     user = current_employee(request)
     if not user:
@@ -114,6 +130,9 @@ def progress_delete_fixed(request, update_id):
     return redirect("progress_updates")
 
 
+# ============================================================
+# EMPLOYEE - UPLOAD TASK ZIP FILE
+# ============================================================
 def task_file_upload_fixed(request, task_id):
     user = current_employee(request)
     if not user:
