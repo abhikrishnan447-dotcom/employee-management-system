@@ -1,6 +1,9 @@
 from .models import ExtensionRequest, Message, Notification, Register
 
 
+# ============================================================
+# GLOBAL TEMPLATE BADGES / NOTIFICATION COUNTERS
+# ============================================================
 def admin_badges(request):
     """Provide employee and admin notification/message counters to every template."""
     employee = None
@@ -8,9 +11,13 @@ def admin_badges(request):
     if user_id:
         employee = Register.objects.filter(id=user_id, status="Active").first()
 
+    # EMPLOYEE - UNREAD NOTIFICATION COUNT
     employee_notification_count = employee.notifications.filter(is_read=False).count() if employee else 0
+
+    # EMPLOYEE - UNREAD MESSAGE COUNT
     employee_message_count = Message.objects.filter(recipient=employee, is_read=False).count() if employee else 0
 
+    # EMPLOYEE - BADGES ONLY
     if not request.session.get("admin"):
         return {
             "admin_notification_count": 0,
@@ -20,6 +27,9 @@ def admin_badges(request):
             "employee_message_count": employee_message_count,
         }
 
+    # ADMIN - UNREAD NOTIFICATION COUNT
+    # ADMIN - UNREAD MESSAGE COUNT
+    # ADMIN - PENDING EXTENSION REQUEST COUNT
     return {
         "admin_notification_count": Notification.objects.filter(is_read=False).count(),
         "admin_message_count": Message.objects.filter(is_admin_recipient=True, is_read=False).count(),
