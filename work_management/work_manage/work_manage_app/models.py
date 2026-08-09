@@ -1,6 +1,9 @@
 from django.db import models
 
 
+# ==============================
+# DEPARTMENT MODEL
+# ==============================
 class Department(models.Model):
     name = models.CharField(max_length=100, unique=True)
     description = models.TextField(blank=True)
@@ -9,6 +12,9 @@ class Department(models.Model):
         return self.name
 
 
+# ==============================
+# EMPLOYEE / REGISTER MODEL
+# ==============================
 class Register(models.Model):
     name = models.CharField(max_length=100)
     profile_photo = models.ImageField(upload_to="profile_photos/", blank=True, null=True)
@@ -23,6 +29,9 @@ class Register(models.Model):
         return self.name
 
 
+# ==============================
+# EMPLOYEE DEPARTMENT MODEL
+# ==============================
 class EmployeeDepartment(models.Model):
     employee = models.OneToOneField(Register, on_delete=models.CASCADE, related_name="department_assignment")
     department = models.ForeignKey(Department, on_delete=models.SET_NULL, null=True, blank=True, related_name="employees")
@@ -32,6 +41,9 @@ class EmployeeDepartment(models.Model):
         return f"{self.employee.name} - {self.department or 'Unassigned'}"
 
 
+# ==============================
+# TASK MODEL
+# ==============================
 class Task(models.Model):
     STATUS_CHOICES = (("Pending", "Pending"), ("In Progress", "In Progress"), ("Completed", "Completed"), ("Overdue", "Overdue"))
     PRIORITY_CHOICES = (("Low", "Low"), ("Medium", "Medium"), ("High", "High"))
@@ -56,6 +68,9 @@ class Task(models.Model):
         return self.assigned_employees.all() if self.assigned_employees.exists() else Register.objects.filter(id=self.assigned_to_id)
 
 
+# ==============================
+# PROGRESS UPDATE MODEL
+# ==============================
 class ProgressUpdate(models.Model):
     task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name="updates")
     employee = models.ForeignKey(Register, on_delete=models.CASCADE, related_name="progress_updates")
@@ -70,6 +85,9 @@ class ProgressUpdate(models.Model):
         return f"{self.task.title} - {self.progress}%"
 
 
+# ==============================
+# TASK FILE MODEL
+# ==============================
 class TaskFile(models.Model):
     task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name="uploaded_files")
     employee = models.ForeignKey(Register, on_delete=models.CASCADE, related_name="task_files")
@@ -83,6 +101,9 @@ class TaskFile(models.Model):
         return f"{self.task.title} - {self.employee.name}"
 
 
+# ==============================
+# EXTENSION REQUEST MODEL
+# ==============================
 class ExtensionRequest(models.Model):
     STATUS_CHOICES = (("Pending", "Pending"), ("Approved", "Approved"), ("Rejected", "Rejected"))
     task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name="extension_requests")
@@ -100,6 +121,9 @@ class ExtensionRequest(models.Model):
         return f"{self.task.title} - {self.status}"
 
 
+# ==============================
+# NOTIFICATION MODEL
+# ==============================
 class Notification(models.Model):
     recipient = models.ForeignKey(Register, on_delete=models.CASCADE, related_name="notifications")
     title = models.CharField(max_length=150)
@@ -111,6 +135,9 @@ class Notification(models.Model):
         ordering = ["-created_at"]
 
 
+# ==============================
+# MESSAGE MODEL
+# ==============================
 class Message(models.Model):
     # Null sender/recipient is used only for the admin side of a conversation.
     sender = models.ForeignKey(Register, on_delete=models.CASCADE, related_name="sent_messages", null=True, blank=True)
