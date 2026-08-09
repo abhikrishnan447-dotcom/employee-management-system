@@ -2,6 +2,7 @@ from django.urls import path
 from . import views
 from . import fixes
 from . import password_reset
+from . import login_page
 
 urlpatterns = [
     # ==============================
@@ -15,7 +16,7 @@ urlpatterns = [
     # ==============================
     path("register/", views.register, name="register"),
     path("register/departments/", views.registration_departments, name="registration_departments"),
-    path("login/", views.login_view, name="login"),
+    path("login/", login_page.employee_login, name="login"),
     path("forgot-password/", password_reset.forgot_password, name="forgot_password"),
     path("logout/", views.logout, name="logout"),
 
