@@ -1,0 +1,50 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Login | WorkSphere</title>
+  <link rel="icon" href="{% static 'images/favicon.png' %}">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+  <style>
+    *{box-sizing:border-box}body{margin:0;min-height:100vh;font-family:Poppins,sans-serif;background:linear-gradient(135deg,#ffedce,#fff7ea,#ffedce);color:#2b2522}.login-page{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:25px}.login-card{width:100%;max-width:980px;background:#fffdf9;border:1px solid #f1d5bb;border-radius:26px;overflow:hidden;display:flex;box-shadow:0 20px 55px rgba(112,65,38,.12)}.login-left{width:47%;padding:55px;background:linear-gradient(145deg,#fff5e9,#fffaf3);display:flex;flex-direction:column;justify-content:center}.login-right{width:53%;padding:55px 65px}.brand{display:inline-flex;align-items:center;gap:10px;text-decoration:none;color:#2b2522;font-size:24px;font-weight:800;margin-bottom:40px}.brand img{width:42px;height:42px}.brand span,.login-left h1 em{color:#ff3737;font-style:normal}.eyebrow{color:#ff3737;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px}.login-left h1{font-size:40px;font-weight:800;line-height:1.2;margin:0 0 15px}.login-left p{color:#786e68;font-size:14px;line-height:1.8;margin-bottom:28px}.benefits{list-style:none;padding:0;margin:0}.benefits li{display:flex;align-items:center;gap:10px;color:#5f554f;font-size:13px;margin:13px 0}.benefits i{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:#fff0e4;color:#ff3737}.form-heading{margin-bottom:28px}.form-heading h2{font-size:28px;font-weight:800;margin-bottom:7px}.form-heading p{font-size:13px;color:#786e68;margin:0}.form-label{font-size:12px;font-weight:700;color:#4f4540;margin-bottom:7px}.input-wrap{position:relative;margin-bottom:18px}.field-icon{position:absolute;left:15px;top:50%;transform:translateY(-50%);color:#a18e82;z-index:2}.form-control{height:50px;border:1px solid #e9c9aa;border-radius:11px!important;padding:0 45px;font-size:13px;background:#fffdf9}.form-control:focus{border-color:#ff8383;box-shadow:0 0 0 .2rem rgba(255,131,131,.15)}.password-toggle{position:absolute;right:13px;top:50%;transform:translateY(-50%);border:0;background:transparent;color:#8f827a;padding:5px;cursor:pointer;z-index:3}.password-toggle:hover{color:#ff3737}.form-options{display:flex;align-items:center;justify-content:space-between;gap:15px;margin:4px 0 22px}.remember{display:flex;align-items:center;gap:7px;color:#786e68;font-size:12px}.remember input{accent-color:#ff3737}.forgot-link{color:#ff3737;text-decoration:none;font-size:12px;font-weight:700;white-space:nowrap}.forgot-link:hover{text-decoration:underline}.login-btn{width:100%;height:51px;border:0;border-radius:11px;background:#ff3737;color:#fff;font-size:13px;font-weight:700}.login-btn:hover{background:#e72e2e}.register-text{text-align:center;color:#786e68;font-size:12px;margin:22px 0 0}.register-text a{color:#ff3737;font-weight:700;text-decoration:none}.back-home{display:flex;justify-content:center;margin-top:15px;color:#786e68;text-decoration:none;font-size:12px}.error-message{background:#fff1f1;color:#d84b4b;border:1px solid #ffd6d6;padding:10px 13px;border-radius:10px;font-size:12px;margin-bottom:17px}@media(max-width:800px){.login-left{display:none}.login-right{width:100%;padding:45px 35px}.login-card{max-width:520px}}@media(max-width:500px){.login-page{padding:12px}.login-right{padding:30px 22px}.form-options{align-items:flex-start}.form-heading h2{font-size:24px}}
+  </style>
+</head>
+<body>
+<div class="login-page">
+  <div class="login-card">
+    <section class="login-left">
+      <a href="{% url 'index' %}" class="brand"><img src="{% static 'images/logo.svg' %}" alt="WorkSphere Logo">Work<span>Sphere</span></a>
+      <div class="eyebrow"><i class="bi bi-stars me-1"></i> Employee Workspace</div>
+      <h1>Welcome <em>Back!</em></h1>
+      <p>Sign in to manage your tasks, track progress, collaborate with your team and keep your work moving forward.</p>
+      <ul class="benefits"><li><i class="bi bi-check2"></i>Manage your daily tasks</li><li><i class="bi bi-check2"></i>Track project progress</li><li><i class="bi bi-check2"></i>Stay connected with your team</li><li><i class="bi bi-check2"></i>View your work performance</li></ul>
+    </section>
+    <section class="login-right">
+      <div class="form-heading"><h2>Sign in to WorkSphere</h2><p>Enter your account details to continue.</p></div>
+      {% if messages %}{% for message in messages %}<div class="error-message">{{ message }}</div>{% endfor %}{% endif %}
+      <form method="post" action="{% url 'login' %}">
+        {% csrf_token %}
+        <label class="form-label" for="email">Email Address</label>
+        <div class="input-wrap"><i class="bi bi-envelope field-icon"></i><input type="email" id="email" name="email" class="form-control" placeholder="Enter your email" required autocomplete="email"></div>
+        <label class="form-label" for="password">Password</label>
+        <div class="input-wrap"><i class="bi bi-lock field-icon"></i><input type="password" id="password" name="password" class="form-control" placeholder="Enter your password" required autocomplete="current-password"><button type="button" class="password-toggle" id="passwordToggle" aria-label="Show password"><i class="bi bi-eye" id="passwordIcon"></i></button></div>
+        <div class="form-options"><label class="remember"><input type="checkbox" name="remember">Remember me</label><a href="{% url 'forgot_password' %}" class="forgot-link">Forgot Password?</a></div>
+        <button type="submit" class="login-btn">Sign In</button>
+      </form>
+      <p class="register-text">Don't have an account? <a href="{% url 'register' %}">Create Account</a></p>
+      <a href="{% url 'index' %}" class="back-home"><i class="bi bi-arrow-left me-1"></i> Back to Home</a>
+    </section>
+  </div>
+</div>
+<script>
+const password=document.getElementById('password');
+const toggle=document.getElementById('passwordToggle');
+const icon=document.getElementById('passwordIcon');
+toggle.addEventListener('click',function(){const visible=password.type==='text';password.type=visible?'password':'text';icon.className=visible?'bi bi-eye':'bi bi-eye-slash';toggle.setAttribute('aria-label',visible?'Show password':'Hide password');});
+</script>
+</body>
+</html>
