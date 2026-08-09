@@ -3,12 +3,9 @@ import os
 
 from django.contrib import messages
 from django.contrib.auth.hashers import check_password, make_password
-from django.contrib.auth.tokens import default_token_generator
 from django.core.mail import send_mail
 from django.db.models import Count, Avg, Q
 from django.shortcuts import get_object_or_404, redirect, render
-from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
-from django.utils.encoding import force_bytes, force_str
 
 from .models import Department, EmployeeDepartment, ExtensionRequest, Message, Notification, ProgressUpdate, Register, Task, TaskFile
 
@@ -56,36 +53,6 @@ def login_view(request):
             if authenticated: request.session["user_id"]=user.id; request.session["email"]=user.email; return redirect("home")
         messages.error(request,"Invalid email or password.")
     return render(request,"login.html")
-
-
-# ==============================
-# FORGOT PASSWORD
-# ==============================
-def forgot_password(request):
-    if request.method=="POST":
-        email=request.POST.get("email","").strip().lower(); user=Register.objects.filter(email=email).first()
-        if user:
-            uid=urlsafe_base64_encode(force_bytes(user.pk)); token=default_token_generator.make_token(user); reset_url=request.build_absolute_uri(f"/reset-password/{uid}/{token}/")
-            try: send_mail("WorkSphere - Reset your password",f"Hello {user.name},\n\nUse the link below to create a new password:\n\n{reset_url}",None,[user.email],fail_silently=False); messages.success(request,"A password reset link has been sent to your registered email address.")
-            except Exception: messages.error(request,"Unable to send the reset email. Please check the email server configuration.")
-        else: messages.error(request,"No employee account was found with that email address.")
-        return redirect("forgot_password")
-    return render(request,"forgot_password.html")
-
-
-# ==============================
-# RESET PASSWORD
-# ==============================
-def reset_password(request,uidb64,token):
-    try: user=Register.objects.get(pk=force_str(urlsafe_base64_decode(uidb64)))
-    except (TypeError,ValueError,OverflowError,Register.DoesNotExist): user=None
-    if not user or not default_token_generator.check_token(user,token): messages.error(request,"This password reset link is invalid or has expired."); return redirect("forgot_password")
-    if request.method=="POST":
-        password=request.POST.get("password",""); confirm_password=request.POST.get("confirm_password","")
-        if len(password)<8: messages.error(request,"Passwords must contain at least 8 characters.")
-        elif password!=confirm_password: messages.error(request,"Passwords do not match.")
-        else: user.password=make_password(password); user.save(update_fields=["password"]); messages.success(request,"Password changed successfully. You can now login."); return redirect("login")
-    return render(request,"reset_password.html",{"email":user.email})
 
 
 # ==============================
