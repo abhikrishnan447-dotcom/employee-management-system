@@ -5,6 +5,9 @@ from .models import Register
 from .views import is_admin
 
 
+# ============================================================
+# ADMIN - DELETE EMPLOYEE
+# ============================================================
 def employee_delete(request, employee_id):
     if not is_admin(request):
         return redirect("adminlogin")
