@@ -43,7 +43,11 @@
             <div>
               <strong>{{ item.subject }}</strong>
               <div class="small text-primary mt-1">
-                From {% if item.is_admin_sender %}Administrator{% elif item.sender %}{{ item.sender.name }}{% else %}System Administrator{% endif %}
+                {% if item.sender_id == user.id %}
+                  To {% if item.is_admin_recipient %}Administrator{% elif item.recipient %}{{ item.recipient.name }}{% else %}Administrator{% endif %}
+                {% else %}
+                  From {% if item.is_admin_sender %}Administrator{% elif item.sender %}{{ item.sender.name }}{% else %}System Administrator{% endif %}
+                {% endif %}
               </div>
             </div>
             <div class="message-meta">
