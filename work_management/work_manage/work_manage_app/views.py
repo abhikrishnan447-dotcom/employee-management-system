@@ -580,3 +580,350 @@ def admin_settings(request):
 # ==============================
 def admin_profile(request):
     return admin_settings(request)
+
+
+# ============================================================
+# CONSOLIDATED FIXES MOVED FROM SEPARATE PYTHON FILES
+# ============================================================
+from pathlib import Path
+import zipfile
+
+
+# ------------------------------
+# EMPLOYEE REGISTRATION (FIXED)
+# ------------------------------
+def register_fixed(request):
+    if request.method == "POST":
+        name = request.POST.get("name", "").strip()
+        profile_photo = request.FILES.get("profile_photo")
+        email = request.POST.get("email", "").strip().lower()
+        phone = request.POST.get("phone", "").strip()
+        designation = request.POST.get("designation", "").strip()
+        password = request.POST.get("password", "")
+        confirm_password = request.POST.get("confirm_password", "")
+        department_id = request.POST.get("department") or None
+
+        if not name or len(name) < 3:
+            messages.error(request, "Please enter a valid name.")
+        elif not phone.isdigit() or len(phone) != 10:
+            messages.error(request, "Please enter a valid 10-digit phone number.")
+        elif Register.objects.filter(email=email).exists():
+            messages.error(request, "Email already exists.")
+        elif len(password) < 8:
+            messages.error(request, "Password must contain at least 8 characters.")
+        elif password != confirm_password:
+            messages.error(request, "Passwords do not match.")
+        elif profile_photo and profile_photo.size > 2 * 1024 * 1024:
+            messages.error(request, "Profile photo must be smaller than 2 MB.")
+        else:
+            employee = Register.objects.create(
+                name=name,
+                email=email,
+                phone=phone,
+                password=make_password(password),
+                profile_photo=profile_photo,
+                department_id=department_id,
+            )
+            EmployeeDepartment.objects.update_or_create(
+                employee=employee,
+                defaults={"department_id": department_id, "designation": designation},
+            )
+            messages.success(request, "Registration successful. Please login.")
+            return redirect("login")
+
+    return render(request, "register.html", {"departments": Department.objects.all()})
+
+
+# ------------------------------
+# EMPLOYEE LOGIN (FIXED)
+# ------------------------------
+def employee_login(request):
+    if request.method == "POST":
+        email = request.POST.get("email", "").strip().lower()
+        password = request.POST.get("password", "")
+        user = Register.objects.filter(email=email).first()
+
+        if user and user.status == "Active":
+            authenticated = check_password(password, user.password)
+            if not authenticated and user.password == password:
+                user.password = make_password(password)
+                user.save(update_fields=["password"])
+                authenticated = True
+
+            if authenticated:
+                request.session["user_id"] = user.id
+                request.session["email"] = user.email
+                return redirect("home")
+
+        messages.error(request, "Invalid email or password.")
+
+    return render(request, "login_fixed.html")
+
+
+# ------------------------------
+# SIMPLE WEBSITE PASSWORD RESET
+# ------------------------------
+def forgot_password(request):
+    if request.method == "POST":
+        email = request.POST.get("email", "").strip().lower()
+        password = request.POST.get("password", "")
+        confirm_password = request.POST.get("confirm_password", "")
+        user = Register.objects.filter(email=email, status="Active").first()
+
+        if not user:
+            messages.error(request, "No active employee account was found with that email address.")
+        elif len(password) < 8:
+            messages.error(request, "Password must contain at least 8 characters.")
+        elif password != confirm_password:
+            messages.error(request, "Passwords do not match.")
+        else:
+            user.password = make_password(password)
+            user.save(update_fields=["password"])
+            messages.success(request, "Password changed successfully. You can now login.")
+            return redirect("login")
+
+    return render(request, "forgot_password.html")
+
+
+# ------------------------------
+# EMPLOYEE MESSAGES - SENT + RECEIVED IN ONE INBOX
+# ------------------------------
+def messages_view_fixed(request):
+    user = current_employee(request)
+    if not user:
+        return redirect("login")
+
+    if request.method == "POST":
+        recipient_id = request.POST.get("recipient")
+        subject = request.POST.get("subject", "").strip()
+        body = request.POST.get("body", "").strip()
+
+        if not subject or not body:
+            messages.error(request, "Please enter a subject and message.")
+            return redirect("messages")
+
+        if recipient_id == "admin":
+            Message.objects.create(
+                sender=user,
+                recipient=None,
+                subject=subject,
+                body=body,
+                is_admin_recipient=True,
+                is_read=False,
+            )
+            messages.success(request, "Message sent to Admin.")
+        else:
+            recipient = get_object_or_404(Register, id=recipient_id, status="Active")
+            if recipient.id == user.id:
+                messages.error(request, "You cannot send a message to yourself.")
+                return redirect("messages")
+
+            Message.objects.create(
+                sender=user,
+                recipient=recipient,
+                subject=subject,
+                body=body,
+                is_read=False,
+            )
+            Notification.objects.create(
+                recipient=recipient,
+                title="New message",
+                message=f"New message from {user.name}.",
+            )
+            messages.success(request, f"Message sent to {recipient.name}.")
+
+        return redirect("messages")
+
+    inbox_qs = (
+        Message.objects.filter(Q(recipient=user) | Q(sender=user))
+        .select_related("sender", "recipient")
+        .order_by("-created_at")
+    )
+    Message.objects.filter(recipient=user, is_read=False).update(is_read=True)
+
+    return render(
+        request,
+        "employee/messages.html",
+        {
+            "user": user,
+            "received": inbox_qs,
+            "employees": Register.objects.filter(status="Active").exclude(id=user.id),
+        },
+    )
+
+
+# ------------------------------
+# TASK PROGRESS HELPERS / FIXED VIEWS
+# ------------------------------
+def _task_employee_progress(task, employee):
+    latest = task.updates.filter(employee=employee).order_by("-created_at").first()
+    return latest.progress if latest else 0
+
+
+def _refresh_task_progress(task):
+    employees = list(task.assigned_employees.all())
+    if not employees and task.assigned_to_id:
+        employees = [task.assigned_to]
+
+    values = [_task_employee_progress(task, employee) for employee in employees]
+    task.progress = round(sum(values) / len(values)) if values else 0
+    task.status = (
+        "Completed" if values and all(value == 100 for value in values)
+        else "In Progress" if any(value > 0 for value in values)
+        else "Pending"
+    )
+    task.save(update_fields=["progress", "status"])
+    return task.progress, task.status
+
+
+def progress_update_fixed(request, task_id):
+    user = current_employee(request)
+    if not user:
+        return redirect("login")
+    task = get_object_or_404(employee_task_queryset(user), id=task_id)
+
+    if request.method == "POST":
+        try:
+            progress = max(0, min(100, int(request.POST.get("progress", 0))))
+        except (TypeError, ValueError):
+            progress = 0
+
+        ProgressUpdate.objects.create(
+            task=task,
+            employee=user,
+            progress=progress,
+            note=request.POST.get("note", "").strip(),
+        )
+        task.refresh_from_db()
+        _, status = _refresh_task_progress(task)
+
+        if status == "Completed":
+            subject = f"Task completed: {task.title}"
+            body = f"All assigned employees have completed the task '{task.title}'."
+            Message.objects.create(
+                sender=user,
+                recipient=None,
+                subject=subject,
+                body=body,
+                is_admin_recipient=True,
+                is_read=False,
+            )
+            if ADMIN_EMAIL:
+                try:
+                    send_mail(
+                        f"WorkSphere - {subject}",
+                        body,
+                        None,
+                        [ADMIN_EMAIL],
+                        fail_silently=False,
+                    )
+                except Exception:
+                    pass
+            messages.success(request, "Task completed. The administrator has been notified.")
+        else:
+            messages.success(request, "Progress updated successfully.")
+
+    return redirect("progress_updates")
+
+
+def progress_edit_fixed(request, update_id):
+    user = current_employee(request)
+    if not user:
+        return redirect("login")
+    update = get_object_or_404(ProgressUpdate, id=update_id, employee=user)
+
+    if request.method == "POST":
+        try:
+            update.progress = max(0, min(100, int(request.POST.get("progress", update.progress))))
+        except (TypeError, ValueError):
+            pass
+        update.note = request.POST.get("note", update.note).strip()
+        update.save()
+        _refresh_task_progress(update.task)
+        messages.success(request, "Progress update edited successfully.")
+
+    return redirect("progress_updates")
+
+
+def progress_delete_fixed(request, update_id):
+    user = current_employee(request)
+    if not user:
+        return redirect("login")
+    update = get_object_or_404(ProgressUpdate, id=update_id, employee=user)
+    task = update.task
+
+    if request.method == "POST":
+        update.delete()
+        _refresh_task_progress(task)
+        messages.success(request, "Progress update deleted.")
+
+    return redirect("progress_updates")
+
+
+def task_file_upload_fixed(request, task_id):
+    user = current_employee(request)
+    if not user:
+        return redirect("login")
+    task = get_object_or_404(employee_task_queryset(user), id=task_id)
+
+    if request.method == "POST":
+        uploaded = request.FILES.get("file")
+        if not uploaded:
+            messages.error(request, "Please select a ZIP file to upload.")
+            return redirect("task_detail", task_id=task.id)
+
+        if Path(uploaded.name).suffix.lower() != ".zip":
+            messages.error(request, "Only ZIP files are allowed.")
+            return redirect("task_detail", task_id=task.id)
+
+        try:
+            if not zipfile.is_zipfile(uploaded):
+                messages.error(request, "The selected file is not a valid ZIP archive.")
+                return redirect("task_detail", task_id=task.id)
+            uploaded.seek(0)
+        except (OSError, ValueError):
+            messages.error(request, "Unable to validate the ZIP file.")
+            return redirect("task_detail", task_id=task.id)
+
+        TaskFile.objects.create(task=task, employee=user, file=uploaded)
+        messages.success(request, "ZIP file uploaded successfully.")
+
+    return redirect("task_detail", task_id=task.id)
+
+
+# ------------------------------
+# GLOBAL TEMPLATE BADGES / COUNTERS
+# ------------------------------
+def admin_badges(request):
+    """Provide unread notification/message counters to templates."""
+    employee = None
+    user_id = request.session.get("user_id")
+    if user_id:
+        employee = Register.objects.filter(id=user_id, status="Active").first()
+
+    employee_notification_count = (
+        employee.notifications.filter(is_read=False).count() if employee else 0
+    )
+    employee_message_count = (
+        Message.objects.filter(recipient=employee, is_read=False).count()
+        if employee else 0
+    )
+
+    if not request.session.get("admin"):
+        return {
+            "admin_notification_count": 0,
+            "admin_message_count": 0,
+            "admin_extension_count": 0,
+            "employee_notification_count": employee_notification_count,
+            "employee_message_count": employee_message_count,
+        }
+
+    return {
+        "admin_notification_count": Notification.objects.filter(is_read=False).count(),
+        "admin_message_count": Message.objects.filter(
+            is_admin_recipient=True, is_read=False
+        ).count(),
+        "admin_extension_count": ExtensionRequest.objects.filter(status="Pending").count(),
+        "employee_notification_count": employee_notification_count,
+        "employee_message_count": employee_message_count,
+    }
