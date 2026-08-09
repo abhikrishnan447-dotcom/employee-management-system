@@ -48,10 +48,6 @@
             </div>
             <div class="message-meta">
               <span class="small text-secondary">{{ item.created_at|date:'d M Y H:i' }}</span>
-              <form method="post" action="{% url 'delete_message' item.id %}">
-                {% csrf_token %}
-                <button type="submit" class="btn btn-sm btn-link text-danger p-0" title="Delete message" aria-label="Delete message"><i class="bi bi-trash"></i></button>
-              </form>
             </div>
           </div>
           <p class="mb-0 mt-2">{{ item.body }}</p>
