@@ -50,7 +50,6 @@ urlpatterns = [
     path("notifications/clear/", views.clear_notifications, name="clear_notifications"),
     path("messages/", message_fix.messages_view_fixed, name="messages"),
     path("messages/clear/", views.clear_messages, name="clear_messages"),
-    path("messages/<int:message_id>/delete/", views.delete_message, name="delete_message"),
 
     # ==============================
     # EMPLOYEE PROFILE & SETTINGS
