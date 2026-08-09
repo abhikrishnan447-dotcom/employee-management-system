@@ -13,11 +13,15 @@ from django.utils.encoding import force_bytes, force_str
 from .models import Department, EmployeeDepartment, ExtensionRequest, Message, Notification, ProgressUpdate, Register, Task, TaskFile
 
 
-
-
+# ==============================
+# PUBLIC / LANDING PAGE
+# ==============================
 def index(request): return render(request, "index.html")
 
 
+# ==============================
+# EMPLOYEE REGISTRATION
+# ==============================
 def register(request):
     if request.method == "POST":
         name=request.POST.get("name","").strip(); profile_photo=request.FILES.get("profile_photo"); email=request.POST.get("email","").strip().lower(); phone=request.POST.get("phone","").strip(); password=request.POST.get("password",""); confirm_password=request.POST.get("confirm_password",""); department_id=request.POST.get("department") or None
@@ -34,9 +38,15 @@ def register(request):
     return render(request,"register.html",{"departments":Department.objects.all()})
 
 
+# ==============================
+# REGISTRATION DEPARTMENT LIST
+# ==============================
 def registration_departments(request): return render(request,"registration_departments.html",{"departments":Department.objects.all()})
 
 
+# ==============================
+# EMPLOYEE LOGIN
+# ==============================
 def login_view(request):
     if request.method=="POST":
         email=request.POST.get("email","").strip().lower(); password=request.POST.get("password",""); user=Register.objects.filter(email=email).first()
@@ -48,6 +58,9 @@ def login_view(request):
     return render(request,"login.html")
 
 
+# ==============================
+# FORGOT PASSWORD
+# ==============================
 def forgot_password(request):
     if request.method=="POST":
         email=request.POST.get("email","").strip().lower(); user=Register.objects.filter(email=email).first()
@@ -60,6 +73,9 @@ def forgot_password(request):
     return render(request,"forgot_password.html")
 
 
+# ==============================
+# RESET PASSWORD
+# ==============================
 def reset_password(request,uidb64,token):
     try: user=Register.objects.get(pk=force_str(urlsafe_base64_decode(uidb64)))
     except (TypeError,ValueError,OverflowError,Register.DoesNotExist): user=None
@@ -72,23 +88,38 @@ def reset_password(request,uidb64,token):
     return render(request,"reset_password.html",{"email":user.email})
 
 
+# ==============================
+# EMPLOYEE LOGOUT
+# ==============================
 def logout(request): request.session.flush(); return redirect("index")
 
 
+# ==============================
+# GET CURRENT EMPLOYEE
+# ==============================
 def current_employee(request):
     user_id=request.session.get("user_id"); return Register.objects.filter(id=user_id,status="Active").first() if user_id else None
 
 
+# ==============================
+# EMPLOYEE HOME
+# ==============================
 def home(request):
     user=current_employee(request)
     if not user: return redirect("login")
     return render(request,"home.html",{"user":user})
 
 
+# ==============================
+# EMPLOYEE TASK QUERYSET
+# ==============================
 def employee_task_queryset(user):
     return Task.objects.filter(Q(assigned_employees=user) | Q(assigned_employees__isnull=True, assigned_to=user)).distinct()
 
 
+# ==============================
+# EMPLOYEE DASHBOARD
+# ==============================
 def dashboard(request):
     user=current_employee(request)
     if not user: return redirect("login")
@@ -99,9 +130,16 @@ def dashboard(request):
     return render(request,"employee/dashboard.html",{"user":user,"tasks":tasks,"task_rows":task_rows,"pending":tasks.filter(status="Pending").count(),"progress":tasks.filter(status="In Progress").count(),"completed":tasks.filter(status="Completed").count()})
 
 
-
+# ==============================
+# ADMIN LOGIN CREDENTIALS
+# ==============================
 ADMIN_EMAIL = 'admin@gamil.com'
 ADMIN_PASSWORD = 'admin@123'
+
+
+# ==============================
+# ADMIN LOGIN
+# ==============================
 def adminlogin(request):
     if request.method=="POST":
         email=request.POST.get("email","").strip().lower(); password=request.POST.get("password","")
@@ -111,22 +149,37 @@ def adminlogin(request):
     return render(request,"adminlogin.html")
 
 
+# ==============================
+# ADMIN SESSION CHECK
+# ==============================
 def is_admin(request): return bool(request.session.get("admin"))
 
 
+# ==============================
+# ADMIN DASHBOARD
+# ==============================
 def admin_dash(request):
     if not is_admin(request): return redirect("adminlogin")
     return render(request,"admin/dashboard.html",{"total_employees":Register.objects.count(),"active_employees":Register.objects.filter(status="Active").count(),"total_tasks":Task.objects.count(),"pending_extensions":ExtensionRequest.objects.filter(status="Pending").count(),"completed_tasks":Task.objects.filter(status="Completed").count(),"employees":Register.objects.all().select_related("department").order_by("name")[:8]})
 
 
+# ==============================
+# ADMIN LOGOUT
+# ==============================
 def adminlogout(request): request.session.flush(); return redirect("index")
 
 
+# ==============================
+# ADMIN EMPLOYEE MANAGEMENT
+# ==============================
 def employee_management(request):
     if not is_admin(request): return redirect("adminlogin")
     return render(request,"admin/employees_v2.html",{"employees":Register.objects.all().order_by("name"),"departments":Department.objects.all()})
 
 
+# ==============================
+# ADMIN EMPLOYEE EDIT
+# ==============================
 def employee_edit(request,employee_id):
     if not is_admin(request): return redirect("adminlogin")
     employee=get_object_or_404(Register,id=employee_id)
@@ -135,12 +188,18 @@ def employee_edit(request,employee_id):
     return render(request,"admin/employee_form.html",{"employee":employee,"departments":Department.objects.all(),"assignment":getattr(employee,"department_assignment",None)})
 
 
+# ==============================
+# ADMIN EMPLOYEE DELETE
+# ==============================
 def employee_delete(request,employee_id):
     if not is_admin(request): return redirect("adminlogin")
     if request.method=="POST": employee=get_object_or_404(Register,id=employee_id); name=employee.name; employee.delete(); messages.success(request,f"Employee {name} deleted successfully.")
     return redirect("employee_management")
 
 
+# ==============================
+# ADMIN DEPARTMENT MANAGEMENT
+# ==============================
 def department_management(request):
     if not is_admin(request): return redirect("adminlogin")
     if request.method=="POST":
@@ -150,17 +209,26 @@ def department_management(request):
     return render(request,"admin/departments.html",{"departments":Department.objects.annotate(employee_count=Count("employees"))})
 
 
+# ==============================
+# ADMIN DEPARTMENT DELETE
+# ==============================
 def department_delete(request,department_id):
     if not is_admin(request): return redirect("adminlogin")
     if request.method=="POST": get_object_or_404(Department,id=department_id).delete()
     return redirect("department_management")
 
 
+# ==============================
+# ADMIN TASK MANAGEMENT
+# ==============================
 def task_management(request):
     if not is_admin(request): return redirect("adminlogin")
     return render(request,"admin/tasks_v2.html",{"tasks":Task.objects.select_related("assigned_to","department").prefetch_related("assigned_employees","uploaded_files__employee"),"employees":Register.objects.filter(status="Active"),"departments":Department.objects.all()})
 
 
+# ==============================
+# ADMIN ASSIGN TASK
+# ==============================
 def assign_task(request):
     if not is_admin(request): return redirect("adminlogin")
     if request.method=="POST":
@@ -176,6 +244,9 @@ def assign_task(request):
     return redirect("task_management")
 
 
+# ==============================
+# ADMIN TASK EDIT
+# ==============================
 def task_edit(request,task_id):
     if not is_admin(request): return redirect("adminlogin")
     task=get_object_or_404(Task,id=task_id)
@@ -186,17 +257,26 @@ def task_edit(request,task_id):
     return render(request,"admin/task_form.html",{"task":task,"employees":Register.objects.filter(status="Active"),"departments":Department.objects.all(),"selected_employees":task.assigned_employees.all()})
 
 
+# ==============================
+# ADMIN TASK DELETE
+# ==============================
 def task_delete(request,task_id):
     if not is_admin(request): return redirect("adminlogin")
     if request.method=="POST": task=get_object_or_404(Task,id=task_id); title=task.title; task.delete(); messages.success(request,f"Task {title} deleted successfully.")
     return redirect("task_management")
 
 
+# ==============================
+# ADMIN EXTENSION REQUESTS
+# ==============================
 def extension_requests(request):
     if not is_admin(request): return redirect("adminlogin")
     return render(request,"admin/extensions.html",{"requests":ExtensionRequest.objects.select_related("task","employee")})
 
 
+# ==============================
+# ADMIN EXTENSION APPROVE / REJECT
+# ==============================
 def extension_action(request,request_id,action):
     if not is_admin(request): return redirect("adminlogin")
     extension=get_object_or_404(ExtensionRequest,id=request_id)
@@ -207,12 +287,18 @@ def extension_action(request,request_id,action):
     return redirect("extension_requests")
 
 
+# ==============================
+# EMPLOYEE TASK LIST
+# ==============================
 def employee_tasks(request):
     user=current_employee(request)
     if not user: return redirect("login")
     return render(request,"employee/tasks.html",{"user":user,"tasks":employee_task_queryset(user)})
 
 
+# ==============================
+# EMPLOYEE TASK DETAIL
+# ==============================
 def task_detail(request,task_id):
     user=current_employee(request)
     if not user: return redirect("login")
@@ -220,6 +306,9 @@ def task_detail(request,task_id):
     return render(request,"employee/task_detail.html",{"user":user,"task":task,"updates":task.updates.filter(employee=user),"extensions":task.extension_requests.filter(employee=user),"files":task.uploaded_files.filter(employee=user)})
 
 
+# ==============================
+# EMPLOYEE PROGRESS UPDATE
+# ==============================
 def progress_update(request,task_id):
     user=current_employee(request)
     if not user: return redirect("login")
@@ -232,6 +321,9 @@ def progress_update(request,task_id):
     return redirect("progress_updates")
 
 
+# ==============================
+# EMPLOYEE TASK FILE UPLOAD
+# ==============================
 def task_file_upload(request,task_id):
     user=current_employee(request)
     if not user: return redirect("login")
@@ -243,6 +335,9 @@ def task_file_upload(request,task_id):
     return redirect("task_detail",task_id=task.id)
 
 
+# ==============================
+# EMPLOYEE TASK FILE DELETE
+# ==============================
 def task_file_delete(request,file_id):
     user=current_employee(request)
     if not user: return redirect("login")
@@ -251,6 +346,9 @@ def task_file_delete(request,file_id):
     return redirect("task_detail",task_id=item.task_id)
 
 
+# ==============================
+# ADMIN TASK FILE DELETE
+# ==============================
 def admin_task_file_delete(request,file_id):
     if not is_admin(request): return redirect("adminlogin")
     item=get_object_or_404(TaskFile,id=file_id)
@@ -258,6 +356,9 @@ def admin_task_file_delete(request,file_id):
     return redirect("task_management")
 
 
+# ==============================
+# EMPLOYEE PROGRESS EDIT
+# ==============================
 def progress_edit(request,update_id):
     user=current_employee(request)
     if not user: return redirect("login")
@@ -269,6 +370,9 @@ def progress_edit(request,update_id):
     return redirect("progress_updates")
 
 
+# ==============================
+# EMPLOYEE PROGRESS DELETE
+# ==============================
 def progress_delete(request,update_id):
     user=current_employee(request)
     if not user: return redirect("login")
@@ -277,12 +381,18 @@ def progress_delete(request,update_id):
     return redirect("progress_updates")
 
 
+# ==============================
+# EMPLOYEE PROGRESS HISTORY
+# ==============================
 def progress_updates(request):
     user=current_employee(request)
     if not user: return redirect("login")
     return render(request,"employee/progress_updates.html",{"user":user,"tasks":employee_task_queryset(user),"updates":user.progress_updates.select_related("task").all()})
 
 
+# ==============================
+# EMPLOYEE REQUEST EXTENSION
+# ==============================
 def request_extension(request,task_id):
     user=current_employee(request)
     if not user: return redirect("login")
@@ -294,6 +404,9 @@ def request_extension(request,task_id):
     return redirect("extension_requests_employee")
 
 
+# ==============================
+# EMPLOYEE EXTENSION EDIT
+# ==============================
 def extension_edit(request,request_id):
     user=current_employee(request)
     if not user: return redirect("login")
@@ -302,6 +415,9 @@ def extension_edit(request,request_id):
     return redirect("extension_requests_employee")
 
 
+# ==============================
+# EMPLOYEE EXTENSION DELETE
+# ==============================
 def extension_delete(request,request_id):
     user=current_employee(request)
     if not user: return redirect("login")
@@ -310,12 +426,18 @@ def extension_delete(request,request_id):
     return redirect("extension_requests_employee")
 
 
+# ==============================
+# EMPLOYEE EXTENSION REQUEST LIST
+# ==============================
 def extension_requests_employee(request):
     user=current_employee(request)
     if not user: return redirect("login")
     return render(request,"employee/extension_requests.html",{"user":user,"tasks":employee_task_queryset(user),"requests":user.extension_requests.select_related("task").all()})
 
 
+# ==============================
+# EMPLOYEE NOTIFICATIONS
+# ==============================
 def notifications(request):
     user=current_employee(request)
     if not user: return redirect("login")
@@ -323,6 +445,9 @@ def notifications(request):
     return render(request,"employee/notifications.html",{"user":user,"notifications":items})
 
 
+# ==============================
+# CLEAR EMPLOYEE NOTIFICATIONS
+# ==============================
 def clear_notifications(request):
     user=current_employee(request)
     if not user: return redirect("login")
@@ -330,6 +455,9 @@ def clear_notifications(request):
     return redirect("notifications")
 
 
+# ==============================
+# EMPLOYEE MESSAGES
+# ==============================
 def messages_view(request):
     user=current_employee(request)
     if not user: return redirect("login")
@@ -348,6 +476,9 @@ def messages_view(request):
     return render(request,"employee/messages.html",{"user":user,"received":received,"sent":sent,"employees":Register.objects.filter(status="Active").exclude(id=user.id)})
 
 
+# ==============================
+# CLEAR EMPLOYEE MESSAGES
+# ==============================
 def clear_messages(request):
     user=current_employee(request)
     if not user: return redirect("login")
@@ -355,6 +486,9 @@ def clear_messages(request):
     return redirect("messages")
 
 
+# ==============================
+# DELETE EMPLOYEE MESSAGE
+# ==============================
 def delete_message(request,message_id):
     user=current_employee(request)
     if not user: return redirect("login")
@@ -363,6 +497,9 @@ def delete_message(request,message_id):
     return redirect("messages")
 
 
+# ==============================
+# EMPLOYEE PROFILE
+# ==============================
 def profile(request):
     user=current_employee(request)
     if not user: return redirect("login")
@@ -373,6 +510,9 @@ def profile(request):
     return render(request,"employee/profile.html",{"user":user})
 
 
+# ==============================
+# EMPLOYEE SETTINGS
+# ==============================
 def settings_view(request):
     user=current_employee(request)
     if not user: return redirect("login")
@@ -382,6 +522,9 @@ def settings_view(request):
     return render(request,"employee/settings.html",{"user":user})
 
 
+# ==============================
+# ADMIN REPORTS
+# ==============================
 def reports(request):
     if not is_admin(request): return redirect("adminlogin")
     tasks=Task.objects.all(); employee_progress=[]
@@ -394,6 +537,9 @@ def reports(request):
     return render(request,"admin/reports_v2.html",{"total":tasks.count(),"pending":tasks.filter(status="Pending").count(),"progress":tasks.filter(status="In Progress").count(),"completed":tasks.filter(status="Completed").count(),"overdue":tasks.filter(deadline__lt=date.today()).exclude(status="Completed").count(),"by_department":Department.objects.annotate(task_count=Count("tasks")),"employee_progress":employee_progress})
 
 
+# ==============================
+# ADMIN NOTIFICATIONS
+# ==============================
 def admin_notifications(request):
     if not is_admin(request): return redirect("adminlogin")
     notifications_qs=Notification.objects.select_related("recipient").order_by("-created_at")
@@ -401,12 +547,18 @@ def admin_notifications(request):
     return render(request,"admin/notifications.html",{"notifications":notifications_qs})
 
 
+# ==============================
+# CLEAR ADMIN NOTIFICATIONS
+# ==============================
 def admin_clear_notifications(request):
     if not is_admin(request): return redirect("adminlogin")
     if request.method=="POST": Notification.objects.all().delete(); messages.success(request,"Administrator notifications cleared.")
     return redirect("admin_notifications")
 
 
+# ==============================
+# ADMIN MESSAGES
+# ==============================
 def admin_messages(request):
     if not is_admin(request): return redirect("adminlogin")
     if request.method=="POST":
@@ -419,12 +571,18 @@ def admin_messages(request):
     return render(request,"admin/messages.html",{"messages_list":items,"employees":Register.objects.filter(status="Active")})
 
 
+# ==============================
+# CLEAR ADMIN MESSAGES
+# ==============================
 def admin_clear_messages(request):
     if not is_admin(request): return redirect("adminlogin")
     if request.method=="POST": Message.objects.filter(Q(is_admin_recipient=True) | Q(is_admin_sender=True)).delete(); messages.success(request,"Administrator messages cleared.")
     return redirect("admin_messages")
 
 
+# ==============================
+# ADMIN MESSAGE REPLY
+# ==============================
 def admin_message_reply(request,message_id):
     if not is_admin(request): return redirect("admin_messages")
     original=get_object_or_404(Message,id=message_id); recipient=original.sender if original.sender_id else original.recipient
@@ -434,15 +592,24 @@ def admin_message_reply(request,message_id):
     return redirect("admin_messages")
 
 
+# ==============================
+# ADMIN TASK FILE LIST
+# ==============================
 def admin_task_files(request):
     if not is_admin(request): return redirect("adminlogin")
     return render(request,"admin/task_files.html",{"files":TaskFile.objects.select_related("task","employee")})
 
 
+# ==============================
+# ADMIN SETTINGS
+# ==============================
 def admin_settings(request):
     if not is_admin(request): return redirect("adminlogin")
     return render(request,"admin/settings.html")
 
 
+# ==============================
+# ADMIN PROFILE
+# ==============================
 def admin_profile(request):
     return admin_settings(request)
