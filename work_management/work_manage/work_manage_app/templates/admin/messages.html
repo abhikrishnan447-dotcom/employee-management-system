@@ -1,4 +1,4 @@
-{% extends 'workspace/admin_base.html' %}
+{% extends 'admin/admin_base.html' %}
 {% block title %}Messages | WorkSphere{% endblock %}
 {% block content %}
 <div class="page-title mb-4"><div class="d-flex justify-content-between align-items-center gap-3"><div><h1>Messages</h1><p>Send messages to employees and reply to employee conversations.</p></div><form method="post" action="{% url 'admin_clear_messages' %}" class="ms-auto flex-shrink-0" onsubmit="return confirm('Clear all administrator messages?');">{% csrf_token %}<button class="btn btn-outline-danger"><i class="bi bi-trash3 me-1"></i> Clear Messages</button></form></div></div>
