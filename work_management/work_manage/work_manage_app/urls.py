@@ -1,6 +1,7 @@
 from django.urls import path
 from . import views
 from . import notification_views
+from . import registration_views
 
 urlpatterns = [
     # ==============================
@@ -12,7 +13,7 @@ urlpatterns = [
     # ==============================
     # EMPLOYEE REGISTRATION & LOGIN
     # ==============================
-    path("register/", views.register_fixed, name="register"),
+    path("register/", registration_views.register, name="register"),
     path("register/departments/", views.registration_departments, name="registration_departments"),
     path("login/", views.employee_login, name="login"),
     path("forgot-password/", views.forgot_password, name="forgot_password"),
