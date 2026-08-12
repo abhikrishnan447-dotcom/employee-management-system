@@ -26,7 +26,8 @@
         .input-wrap>i.field-icon{position:absolute;left:17px;top:50%;transform:translateY(-50%);color:#a1a5ad;font-size:16px;z-index:2}
         .form-control{width:100%;height:53px;border:1px solid #e5e1dc;border-radius:12px;padding:0 48px;font-size:14px;font-family:Poppins,sans-serif;outline:none;background:#fff;transition:.2s ease}
         .form-control:focus{border-color:#ff8383;box-shadow:0 0 0 4px rgba(255,131,131,.14)}
-        .password-toggle{position:absolute;right:15px;top:50%;transform:translateY(-50%);border:0;background:transparent;color:#9da1aa;padding:4px;cursor:pointer;font-size:16px}
+        input[type="password"]::-ms-reveal,input[type="password"]::-ms-clear{display:none!important}
+        .password-toggle{position:absolute;right:15px;top:50%;transform:translateY(-50%);border:0;background:transparent;color:#9da1aa;padding:4px;cursor:pointer;font-size:16px;z-index:3}
         .password-toggle:hover{color:#ff3737}
         .login-btn{width:100%;height:53px;border:0;border-radius:12px;background:#ff3737;color:#fff;font-family:Poppins,sans-serif;font-size:14px;font-weight:600;cursor:pointer;transition:.25s ease;margin-top:5px}
         .login-btn:hover{background:#ed2929;transform:translateY(-2px);box-shadow:0 10px 24px rgba(255,55,55,.22)}
