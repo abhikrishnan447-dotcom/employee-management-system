@@ -27,7 +27,7 @@
             <option value="{{ employee.id }}">{{ employee.name }}</option>
           {% endfor %}
         </select>
-        <input class="form-control mb-3" name="subject" placeholder="Subject" required>
+        <input type="hidden" name="subject" value="General Message">
         <textarea class="form-control mb-3" name="body" rows="5" placeholder="Message" required></textarea>
         <button type="submit" class="btn btn-primary"><i class="bi bi-send me-1"></i>Send</button>
       </form>
@@ -41,7 +41,7 @@
         <div class="message-row py-3 border-bottom">
           <div class="message-heading">
             <div>
-              <strong>{{ item.subject }}</strong>
+              <strong>{{ item.subject|default:'Message' }}</strong>
               <div class="small text-primary mt-1">
                 {% if item.sender_id == user.id %}
                   To {% if item.is_admin_recipient %}Administrator{% elif item.recipient %}{{ item.recipient.name }}{% else %}Administrator{% endif %}
@@ -54,7 +54,25 @@
               <span class="small text-secondary">{{ item.created_at|date:'d M Y H:i' }}</span>
             </div>
           </div>
-          <p class="mb-0 mt-2">{{ item.body }}</p>
+          <p class="mb-2 mt-2">{{ item.body }}</p>
+
+          {% if item.sender_id != user.id %}
+            <form method="post" action="{% url 'messages' %}" class="message-reply mt-3">
+              {% csrf_token %}
+              {% if item.is_admin_sender %}
+                <input type="hidden" name="recipient" value="admin">
+              {% elif item.sender %}
+                <input type="hidden" name="recipient" value="{{ item.sender.id }}">
+              {% endif %}
+              <input type="hidden" name="subject" value="Re: {{ item.subject }}">
+              <textarea class="form-control mb-2" name="body" rows="2" placeholder="Write a reply..." required></textarea>
+              <div class="d-flex justify-content-end">
+                <button type="submit" class="btn btn-sm btn-primary">
+                  <i class="bi bi-reply me-1"></i> Reply
+                </button>
+              </div>
+            </form>
+          {% endif %}
         </div>
       {% empty %}
         <div class="empty-state py-4">
