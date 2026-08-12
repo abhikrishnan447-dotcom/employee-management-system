@@ -1,5 +1,6 @@
 from django.contrib import messages
 from django.shortcuts import get_object_or_404, redirect
+from django.db.models import Q
 
 from .models import Notification, Task
 
@@ -11,7 +12,10 @@ def start_task(request, task_id):
         return redirect("login")
 
     task = get_object_or_404(
-        Task.objects.filter(assigned_employees__id=user_id).distinct(),
+        Task.objects.filter(
+            Q(assigned_employees__id=user_id)
+            | Q(assigned_employees__isnull=True, assigned_to_id=user_id)
+        ).distinct(),
         id=task_id,
     )
 
@@ -19,13 +23,12 @@ def start_task(request, task_id):
         if task.status == "Pending":
             task.status = "In Progress"
             task.save(update_fields=["status"])
-            employee = task.assigned_employees.filter(id=user_id).first()
-            if employee:
-                Notification.objects.create(
-                    recipient=None,
-                    title="Task started",
-                    message=f"{employee.name} started the task: {task.title}",
-                )
+            employee = task.assigned_employees.filter(id=user_id).first() or task.assigned_to
+            Notification.objects.create(
+                recipient=None,
+                title="Task started",
+                message=f"{employee.name} started the task: {task.title}",
+            )
             messages.success(request, "Task started. Status changed to In Progress.")
         elif task.status == "In Progress":
             messages.info(request, "This task is already in progress.")
