@@ -2,6 +2,86 @@
 {% block title %}Extension Requests | WorkSphere{% endblock %}
 {% block content %}
 <div class="page-title mb-4"><h1>Request Extension</h1><p>Ask the administrator for additional time and track the decision.</p></div>
-<div class="row g-4 mb-4">{% for task in tasks %}<div class="col-lg-6"><div class="card-pro p-4 h-100"><h5>{{ task.title }}</h5><p class="text-secondary">Current deadline: {{ task.deadline }}</p><form method="post" action="{% url 'request_extension' task.id %}">{% csrf_token %}<label class="form-label">New deadline</label><input class="form-control mb-3" type="date" name="requested_deadline" required><label class="form-label">Reason</label><textarea class="form-control mb-3" name="reason" rows="3" placeholder="Explain why you need more time" required></textarea><button class="btn btn-primary"><i class="bi bi-calendar-plus"></i> Submit Request</button></form></div></div>{% empty %}<div class="col-12"><div class="card-pro p-4 text-secondary">No tasks available for an extension request.</div></div>{% endfor %}</div>
-<div class="card-pro p-4"><h5 class="mb-3">My Extension Requests</h5><div class="table-responsive"><table class="table align-middle"><thead><tr><th>Task</th><th>Requested Deadline</th><th>Reason</th><th>Status</th><th>Admin Note</th><th>Actions</th></tr></thead><tbody>{% for item in requests %}<tr><td>{{ item.task.title }}</td><td>{{ item.requested_deadline }}</td><td>{{ item.reason }}</td><td><span class="badge">{{ item.status }}</span></td><td>{{ item.admin_note|default:'Pending admin review' }}</td><td>{% if item.status == 'Pending' %}<div class="d-inline-flex align-items-center gap-2"><form method="post" action="{% url 'extension_edit' item.id %}" class="d-flex gap-1 mb-0">{% csrf_token %}<input class="form-control form-control-sm" type="date" name="requested_deadline" value="{{ item.requested_deadline|date:'Y-m-d' }}" required><input class="form-control form-control-sm" name="reason" value="{{ item.reason }}" required><button class="btn btn-sm btn-outline-primary" title="Edit extension request" aria-label="Edit extension request"><i class="bi bi-pencil"></i></button></form><form method="post" action="{% url 'extension_delete' item.id %}" onsubmit="return confirm('Delete this extension request?');" class="mb-0"><button class="btn btn-sm btn-outline-danger" title="Delete extension request" aria-label="Delete extension request"><i class="bi bi-trash"></i></button></form></div>{% else %}<span class="small text-secondary">Locked after review</span>{% endif %}</td></tr>{% empty %}<tr><td colspan="6" class="text-secondary">No extension requests yet.</td></tr>{% endfor %}</tbody></table></div></div>
+
+<div class="row g-4 mb-4">
+  {% for task in tasks %}
+  <div class="col-lg-6">
+    <div class="card-pro p-4 h-100">
+      <h5>{{ task.title }}</h5>
+      <p class="text-secondary">Current deadline: {{ task.deadline }}</p>
+      <form method="post" action="{% url 'request_extension' task.id %}">
+        {% csrf_token %}
+        <label class="form-label">New deadline</label>
+        <input class="form-control mb-3" type="date" name="requested_deadline" required>
+        <label class="form-label">Reason</label>
+        <textarea class="form-control mb-3" name="reason" rows="3" placeholder="Explain why you need more time" required></textarea>
+        <button class="btn btn-primary"><i class="bi bi-calendar-plus"></i> Submit Request</button>
+      </form>
+    </div>
+  </div>
+  {% empty %}
+  <div class="col-12"><div class="card-pro p-4 text-secondary">No tasks available for an extension request.</div></div>
+  {% endfor %}
+</div>
+
+<div class="card-pro p-4">
+  <div class="d-flex align-items-center justify-content-between gap-3 mb-3">
+    <div>
+      <h5 class="mb-1">My Extension Requests</h5>
+      <p class="small text-secondary mb-0">Track whether each request is waiting for review, approved, or rejected.</p>
+    </div>
+  </div>
+  <div class="table-responsive">
+    <table class="table align-middle">
+      <thead><tr><th>Task</th><th>Requested Deadline</th><th>Reason</th><th>Status</th><th>Admin Note</th><th>Actions</th></tr></thead>
+      <tbody>
+      {% for item in requests %}
+        <tr>
+          <td><strong>{{ item.task.title }}</strong></td>
+          <td>{{ item.requested_deadline }}</td>
+          <td>{{ item.reason }}</td>
+          <td>
+            {% if item.status == 'Approved' %}
+              <span class="extension-badge extension-approved"><i class="bi bi-check-circle me-1"></i> Approved</span>
+            {% elif item.status == 'Rejected' %}
+              <span class="extension-badge extension-rejected"><i class="bi bi-x-circle me-1"></i> Rejected</span>
+            {% else %}
+              <span class="extension-badge extension-pending"><i class="bi bi-hourglass-split me-1"></i> Pending Review</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if item.status == 'Pending' %}
+              <span class="small text-secondary">Waiting for administrator review</span>
+            {% elif item.admin_note %}
+              <span class="small">{{ item.admin_note }}</span>
+            {% else %}
+              <span class="small text-secondary">{% if item.status == 'Approved' %}Request approved{% else %}Request rejected{% endif %}</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if item.status == 'Pending' %}
+              <div class="d-inline-flex align-items-center gap-2">
+                <form method="post" action="{% url 'extension_edit' item.id %}" class="d-flex gap-1 mb-0">
+                  {% csrf_token %}
+                  <input class="form-control form-control-sm" type="date" name="requested_deadline" value="{{ item.requested_deadline|date:'Y-m-d' }}" required>
+                  <input class="form-control form-control-sm" name="reason" value="{{ item.reason }}" required>
+                  <button class="btn btn-sm btn-outline-primary" title="Edit extension request" aria-label="Edit extension request"><i class="bi bi-pencil"></i></button>
+                </form>
+                <form method="post" action="{% url 'extension_delete' item.id %}" onsubmit="return confirm('Delete this extension request?');" class="mb-0">
+                  {% csrf_token %}
+                  <button class="btn btn-sm btn-outline-danger" title="Delete extension request" aria-label="Delete extension request"><i class="bi bi-trash"></i></button>
+                </form>
+              </div>
+            {% else %}
+              <span class="small text-secondary">Locked after review</span>
+            {% endif %}
+          </td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="6" class="text-secondary">No extension requests yet.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
 {% endblock %}
