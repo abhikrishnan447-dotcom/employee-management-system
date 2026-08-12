@@ -26,8 +26,12 @@ class DepartmentAdmin(admin.ModelAdmin):
 # ==============================
 @admin.register(EmployeeDepartment)
 class EmployeeDepartmentAdmin(admin.ModelAdmin):
-    list_display = ("employee", "department", "designation")
+    list_display = ("employee", "department", "employee_designation")
     list_filter = ("department",)
+
+    @admin.display(description="Designation")
+    def employee_designation(self, obj):
+        return obj.employee.designation
 
 
 # ==============================
@@ -51,7 +55,7 @@ class ProgressUpdateAdmin(admin.ModelAdmin):
 # ==============================
 # EXTENSION REQUEST ADMIN
 # ==============================
-@admin.register(ExtensionRequest)
+@admin.register(ExtensionRequestAdmin)
 class ExtensionRequestAdmin(admin.ModelAdmin):
     list_display = ("task", "employee", "requested_deadline", "status", "created_at")
     list_filter = ("status",)
