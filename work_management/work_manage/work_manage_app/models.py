@@ -125,7 +125,8 @@ class ExtensionRequest(models.Model):
 # NOTIFICATION MODEL
 # ==============================
 class Notification(models.Model):
-    recipient = models.ForeignKey(Register, on_delete=models.CASCADE, related_name="notifications")
+    # Employee notifications have a recipient. Admin notifications use NULL.
+    recipient = models.ForeignKey(Register, on_delete=models.CASCADE, related_name="notifications", null=True, blank=True)
     title = models.CharField(max_length=150)
     message = models.TextField()
     is_read = models.BooleanField(default=False)
