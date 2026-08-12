@@ -1,31 +1,32 @@
 (()=>{
   const loader=document.getElementById('page-loader');
-  const landingPage=window.location.pathname==='/'||window.location.pathname==='/home/';
   if(loader){
-    if(landingPage)loader.remove();
-    else{const img=loader.querySelector('img');if(img&&img.src.includes('workspace-loader.svg'))img.src=img.src.replace('workspace-loader.svg','laptop-loader.svg');}
+    const img=loader.querySelector('img');
+    if(img&&img.src.includes('workspace-loader.svg'))img.src=img.src.replace('workspace-loader.svg','laptop-loader.svg');
   }
 })();
 
 document.addEventListener('DOMContentLoaded',()=>{
   const loader=document.getElementById('page-loader');
   const landingPage=window.location.pathname==='/'||window.location.pathname==='/home/';
-  const minLoaderTime=1000;
+  const minLoaderTime=landingPage?0:1000;
   const loaderStarted=performance.now();
   const showLoader=()=>{
-    if(!loader||landingPage)return;
+    if(!loader)return;
     const img=loader.querySelector('img');
     if(img&&img.src.includes('workspace-loader.svg'))img.src=img.src.replace('workspace-loader.svg','laptop-loader.svg');
     loader.classList.remove('done');
   };
   const hideLoader=()=>{
-    if(!loader||landingPage)return;
+    if(!loader)return;
     const elapsed=performance.now()-loaderStarted;
     const remaining=Math.max(0,minLoaderTime-elapsed);
     setTimeout(()=>loader.classList.add('done'),remaining);
   };
-  if(landingPage){if(loader)loader.remove();}
-  else if(loader){if(document.readyState==='complete')hideLoader();else window.addEventListener('load',hideLoader,{once:true});}
+  if(loader){
+    if(document.readyState==='complete')hideLoader();
+    else window.addEventListener('load',hideLoader,{once:true});
+  }
   document.querySelectorAll('[data-sidebar-toggle]').forEach(b=>b.addEventListener('click',()=>document.querySelector('.app-sidebar')?.classList.toggle('show')));
   document.querySelectorAll('.alert').forEach(a=>setTimeout(()=>{a.classList.add('fade');setTimeout(()=>a.remove(),400)},4500));
   document.querySelectorAll('[data-confirm]').forEach(el=>el.addEventListener('click',e=>{if(!confirm(el.dataset.confirm))e.preventDefault()}));
