@@ -152,3 +152,7 @@ class Message(models.Model):
 
     class Meta:
         ordering = ["-created_at"]
+
+
+# Register notification signal handlers after all models are defined.
+from . import signals  # noqa: E402,F401
