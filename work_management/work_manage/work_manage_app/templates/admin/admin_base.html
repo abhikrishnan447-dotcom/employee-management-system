@@ -25,8 +25,6 @@
 <a class="side-link {% if request.resolver_match.url_name == 'reports' %}active{% endif %}" href="{% url 'reports' %}"><i class="bi bi-bar-chart-line"></i><span>Reports</span></a>
 <a class="side-link {% if request.resolver_match.url_name == 'admin_notifications' %}active{% endif %}" href="{% url 'admin_notifications' %}"><i class="bi bi-bell"></i><span>Notifications</span>{% if admin_notification_count %}<span class="nav-badge">{{ admin_notification_count }}</span>{% endif %}</a>
 <a class="side-link {% if request.resolver_match.url_name == 'admin_messages' %}active{% endif %}" href="{% url 'admin_messages' %}"><i class="bi bi-chat-dots"></i><span>Messages</span>{% if admin_message_count %}<span class="nav-badge">{{ admin_message_count }}</span>{% endif %}</a>
-<div class="side-title">Account</div>
-<a class="side-link {% if request.resolver_match.url_name == 'admin_profile' %}active{% endif %}" href="{% url 'admin_profile' %}"><i class="bi bi-person-circle"></i><span>Profile</span></a>
 <a class="side-link text-danger" href="{% url 'adminlogout' %}"><i class="bi bi-box-arrow-right"></i><span>Logout</span></a>
 </aside>
 <main class="app-main">
