@@ -8,6 +8,7 @@
     <link rel="icon" type="image/png" href="{% static 'images/favicon.png' %}">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link href="{% static 'css/loader.css' %}" rel="stylesheet">
     <style>
         *{box-sizing:border-box}
         body{margin:0;min-height:100vh;font-family:Poppins,sans-serif;background:#ffedce;color:#20242c;display:flex;align-items:center;justify-content:center;padding:24px;overflow:hidden}
@@ -36,45 +37,28 @@
     </style>
 </head>
 <body>
+<div id="page-loader" aria-label="Loading"><div class="loader-inner"><img src="{% static 'images/workspace-loader.svg' %}" alt="Loading workspace"><p>Preparing your workspace<span></span></p></div></div>
 <div class="admin-page">
     <div class="shape shape-one"></div>
     <div class="shape shape-two"></div>
     <div class="shape shape-three"></div>
-
     <div class="login-card">
         <div class="admin-icon"><i class="bi bi-shield-lock-fill"></i></div>
         <h1>Admin Login</h1>
         <p class="subtitle">Sign in to access the administrator workspace.</p>
-
-        {% if messages %}
-            {% for message in messages %}
-                <div class="error-message">{{ message }}</div>
-            {% endfor %}
-        {% endif %}
-
+        {% if messages %}{% for message in messages %}<div class="error-message">{{ message }}</div>{% endfor %}{% endif %}
         <form method="POST">
             {% csrf_token %}
             <label class="form-label" for="email">Email Address</label>
-            <div class="input-wrap">
-                <i class="bi bi-envelope field-icon"></i>
-                <input type="email" id="email" name="email" class="form-control" placeholder="Enter your email" required autocomplete="email">
-            </div>
-
+            <div class="input-wrap"><i class="bi bi-envelope field-icon"></i><input type="email" id="email" name="email" class="form-control" placeholder="Enter your email" required autocomplete="email"></div>
             <label class="form-label" for="password">Password</label>
-            <div class="input-wrap">
-                <i class="bi bi-lock field-icon"></i>
-                <input type="password" id="password" name="password" class="form-control" placeholder="Enter your password" required autocomplete="current-password">
-                <button type="button" class="password-toggle" onclick="togglePassword()" aria-label="Show password">
-                    <i class="bi bi-eye" id="passwordIcon"></i>
-                </button>
-            </div>
-
+            <div class="input-wrap"><i class="bi bi-lock field-icon"></i><input type="password" id="password" name="password" class="form-control" placeholder="Enter your password" required autocomplete="current-password"><button type="button" class="password-toggle" onclick="togglePassword()" aria-label="Show password"><i class="bi bi-eye" id="passwordIcon"></i></button></div>
             <button type="submit" class="login-btn">Sign In <i class="bi bi-arrow-right ms-1"></i></button>
         </form>
-
         <a href="{% url 'index' %}" class="back-home"><i class="bi bi-arrow-left"></i> Back to Home</a>
     </div>
 </div>
+<script src="{% static 'js/app.js' %}"></script>
 <script>
 function togglePassword(){const input=document.getElementById('password');const icon=document.getElementById('passwordIcon');const visible=input.type==='text';input.type=visible?'password':'text';icon.className=visible?'bi bi-eye':'bi bi-eye-slash';}
 </script>
