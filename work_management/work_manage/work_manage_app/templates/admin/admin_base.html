@@ -1,0 +1,37 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{% block title %}Admin | Work Management{% endblock %}</title>
+<link rel="icon" href="{% static 'images/favicon.png' %}">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+<link href="{% static 'css/app.css' %}" rel="stylesheet">
+<link href="{% static 'css/loader.css' %}" rel="stylesheet">
+</head>
+<body>
+<div id="page-loader"><div class="loader-inner"><img src="{% static 'images/laptop-loader.svg' %}" alt="Loading"><p>Preparing your workspace<span></span></p></div></div>
+<aside class="app-sidebar">
+<a class="brand" href="{% url 'admin_dash' %}"><i class="bi bi-grid-1x2-fill"></i>Work<span>Sphere</span></a>
+<div class="side-title">Management</div>
+<a class="side-link {% if request.resolver_match.url_name == 'admin_dash' %}active{% endif %}" href="{% url 'admin_dash' %}"><i class="bi bi-speedometer2"></i><span>Dashboard</span></a>
+<a class="side-link {% if request.resolver_match.url_name == 'employee_management' or request.resolver_match.url_name == 'employee_edit' %}active{% endif %}" href="{% url 'employee_management' %}"><i class="bi bi-people"></i><span>Employees</span></a>
+<a class="side-link {% if request.resolver_match.url_name == 'department_management' %}active{% endif %}" href="{% url 'department_management' %}"><i class="bi bi-diagram-3"></i><span>Departments</span></a>
+<a class="side-link {% if request.resolver_match.url_name == 'task_management' or request.resolver_match.url_name == 'task_create' or request.resolver_match.url_name == 'task_edit' %}active{% endif %}" href="{% url 'task_management' %}"><i class="bi bi-check2-square"></i><span>Tasks</span></a>
+<a class="side-link {% if request.resolver_match.url_name == 'admin_task_files' %}active{% endif %}" href="{% url 'admin_task_files' %}"><i class="bi bi-folder2-open"></i><span>Employee Files</span></a>
+<a class="side-link {% if request.resolver_match.url_name == 'extension_requests' %}active{% endif %}" href="{% url 'extension_requests' %}"><i class="bi bi-clock-history"></i><span>Extension Requests</span>{% if admin_extension_count %}<span class="nav-badge">{{ admin_extension_count }}</span>{% endif %}</a>
+<div class="side-title">Insights & Communication</div>
+<a class="side-link {% if request.resolver_match.url_name == 'reports' %}active{% endif %}" href="{% url 'reports' %}"><i class="bi bi-bar-chart-line"></i><span>Reports</span></a>
+<a class="side-link {% if request.resolver_match.url_name == 'admin_notifications' %}active{% endif %}" href="{% url 'admin_notifications' %}"><i class="bi bi-bell"></i><span>Notifications</span>{% if admin_notification_count %}<span class="nav-badge">{{ admin_notification_count }}</span>{% endif %}</a>
+<a class="side-link {% if request.resolver_match.url_name == 'admin_messages' %}active{% endif %}" href="{% url 'admin_messages' %}"><i class="bi bi-chat-dots"></i><span>Messages</span>{% if admin_message_count %}<span class="nav-badge">{{ admin_message_count }}</span>{% endif %}</a>
+<div class="side-title">Account</div>
+<a class="side-link {% if request.resolver_match.url_name == 'admin_profile' %}active{% endif %}" href="{% url 'admin_profile' %}"><i class="bi bi-person-circle"></i><span>Profile</span></a>
+<a class="side-link text-danger" href="{% url 'adminlogout' %}"><i class="bi bi-box-arrow-right"></i><span>Logout</span></a>
+</aside>
+<main class="app-main">
+<header class="topbar"><div class="d-flex align-items-center gap-3"><button class="btn btn-light mobile-menu" data-sidebar-toggle aria-label="Open menu"><i class="bi bi-list"></i></button><div><strong>Admin Workspace</strong><div class="small text-secondary">Manage your team with clarity</div></div></div><div class="d-flex align-items-center gap-3"><div class="d-none d-sm-block text-end"><strong class="d-block">Administrator</strong><span class="small text-secondary">Workspace Admin</span></div><div class="avatar"><i class="bi bi-person-fill"></i></div></div></header>
+<div class="page-wrap">{% if messages %}{% for message in messages %}<div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show" role="alert">{{ message }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>{% endfor %}{% endif %}{% block content %}{% endblock %}</div>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script><script src="{% static 'js/app.js' %}"></script>
+</body></html>
