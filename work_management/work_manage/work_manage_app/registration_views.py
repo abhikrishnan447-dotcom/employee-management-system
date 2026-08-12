@@ -28,32 +28,16 @@ def register(request):
         elif Register.objects.filter(email=email).exists():
             messages.error(request, "Email already exists.")
         elif not PASSWORD_PATTERN.fullmatch(password):
-            messages.error(
-                request,
-                "Password must be at least 8 characters and include one uppercase letter, one lowercase letter, one number, and one special character.",
-            )
+            messages.error(request, "Password must be at least 8 characters and include one uppercase letter, one lowercase letter, one number, and one special character.")
         elif password != confirm_password:
             messages.error(request, "Passwords do not match.")
         elif profile_photo and profile_photo.size > 2 * 1024 * 1024:
             messages.error(request, "Profile photo must be smaller than 2 MB.")
         else:
-            employee = Register.objects.create(
-                name=name,
-                email=email,
-                phone=phone,
-                designation=designation,
-                password=make_password(password),
-                profile_photo=profile_photo,
-                department_id=department_id,
-            )
-
+            employee = Register.objects.create(name=name, email=email, phone=phone, designation=designation, password=make_password(password), profile_photo=profile_photo, department_id=department_id)
             if department_id:
-                EmployeeDepartment.objects.update_or_create(
-                    employee=employee,
-                    defaults={"department_id": department_id},
-                )
-
+                EmployeeDepartment.objects.update_or_create(employee=employee, defaults={"department_id": department_id})
             messages.success(request, "Registration successful. Please login.")
             return redirect("login")
 
-    return render(request, "register.html", {"departments": Department.objects.all()})
+    return render(request, "employee/register.html", {"departments": Department.objects.all()})
