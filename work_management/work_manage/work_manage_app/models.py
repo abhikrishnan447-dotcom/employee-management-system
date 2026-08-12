@@ -21,6 +21,7 @@ class Register(models.Model):
     email = models.EmailField(unique=True)
     phone = models.CharField(max_length=10)
     department = models.ForeignKey(Department, on_delete=models.SET_NULL, null=True, blank=True, related_name="registered_employees")
+    designation = models.CharField(max_length=100, blank=True)
     password = models.CharField(max_length=128)
     STATUS_CHOICES = (("Active", "Active"), ("Inactive", "Inactive"))
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default="Active")
@@ -35,7 +36,6 @@ class Register(models.Model):
 class EmployeeDepartment(models.Model):
     employee = models.OneToOneField(Register, on_delete=models.CASCADE, related_name="department_assignment")
     department = models.ForeignKey(Department, on_delete=models.SET_NULL, null=True, blank=True, related_name="employees")
-    designation = models.CharField(max_length=100, blank=True)
 
     def __str__(self):
         return f"{self.employee.name} - {self.department or 'Unassigned'}"
