@@ -2,6 +2,7 @@ from django.urls import path
 from . import views
 from . import notification_views
 from . import registration_views
+from . import task_actions
 
 urlpatterns = [
     # ==============================
@@ -26,6 +27,7 @@ urlpatterns = [
     path("tasks/", views.employee_tasks, name="employee_tasks"),
     path("tasks/<int:task_id>/", views.task_detail, name="task_detail"),
     path("progress-updates/", views.progress_updates, name="progress_updates"),
+    path("tasks/<int:task_id>/start/", task_actions.start_task, name="start_task"),
     path("tasks/<int:task_id>/progress/", views.progress_update_fixed, name="progress_update"),
     path("tasks/<int:task_id>/upload-file/", views.task_file_upload_fixed, name="task_file_upload"),
     path("task-files/<int:file_id>/delete/", views.task_file_delete, name="task_file_delete"),
