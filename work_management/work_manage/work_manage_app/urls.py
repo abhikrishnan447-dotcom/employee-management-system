@@ -1,5 +1,6 @@
 from django.urls import path
 from . import views
+from . import notification_views
 
 urlpatterns = [
     # ==============================
@@ -100,8 +101,8 @@ urlpatterns = [
     # ==============================
     # ADMIN NOTIFICATIONS
     # ==============================
-    path("admin/notifications/", views.admin_notifications, name="admin_notifications"),
-    path("admin/notifications/clear/", views.admin_clear_notifications, name="admin_clear_notifications"),
+    path("admin/notifications/", notification_views.admin_notifications, name="admin_notifications"),
+    path("admin/notifications/clear/", notification_views.admin_clear_notifications, name="admin_clear_notifications"),
 
     # ==============================
     # ADMIN MESSAGES
