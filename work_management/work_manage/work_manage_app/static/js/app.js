@@ -1,3 +1,12 @@
+(()=>{
+  const loader=document.getElementById('page-loader');
+  const landingPage=window.location.pathname==='/'||window.location.pathname==='/home/';
+  if(loader){
+    if(landingPage)loader.remove();
+    else{const img=loader.querySelector('img');if(img&&img.src.includes('workspace-loader.svg'))img.src=img.src.replace('workspace-loader.svg','laptop-loader.svg');}
+  }
+})();
+
 document.addEventListener('DOMContentLoaded',()=>{
   const loader=document.getElementById('page-loader');
   const landingPage=window.location.pathname==='/'||window.location.pathname==='/home/';
