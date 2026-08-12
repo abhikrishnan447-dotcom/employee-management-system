@@ -11,22 +11,35 @@ document.addEventListener('DOMContentLoaded',()=>{
   const landingPage=window.location.pathname==='/'||window.location.pathname==='/home/';
   const minLoaderTime=landingPage?0:1000;
   const loaderStarted=performance.now();
+  let hidden=false;
+  let hideTimer=null;
+  const finishLoader=()=>{
+    if(!loader||hidden)return;
+    hidden=true;
+    if(hideTimer)clearTimeout(hideTimer);
+    loader.classList.add('done');
+  };
+  const hideLoader=()=>{
+    if(!loader||hidden)return;
+    const elapsed=performance.now()-loaderStarted;
+    const remaining=Math.max(0,minLoaderTime-elapsed);
+    hideTimer=setTimeout(finishLoader,remaining);
+  };
   const showLoader=()=>{
     if(!loader)return;
+    hidden=false;
+    if(hideTimer)clearTimeout(hideTimer);
     const img=loader.querySelector('img');
     if(img&&img.src.includes('workspace-loader.svg'))img.src=img.src.replace('workspace-loader.svg','laptop-loader.svg');
     loader.classList.remove('done');
   };
-  const hideLoader=()=>{
-    if(!loader)return;
-    const elapsed=performance.now()-loaderStarted;
-    const remaining=Math.max(0,minLoaderTime-elapsed);
-    setTimeout(()=>loader.classList.add('done'),remaining);
-  };
   if(loader){
-    if(document.readyState==='complete')hideLoader();
-    else window.addEventListener('load',hideLoader,{once:true});
+    // Do not wait forever for window.load. The loader is guaranteed to disappear.
+    window.addEventListener('load',hideLoader,{once:true});
+    hideLoader();
+    setTimeout(finishLoader,landingPage?1500:5000);
   }
+  window.addEventListener('pageshow',()=>{if(loader)finishLoader()});
   document.querySelectorAll('[data-sidebar-toggle]').forEach(b=>b.addEventListener('click',()=>document.querySelector('.app-sidebar')?.classList.toggle('show')));
   document.querySelectorAll('.alert').forEach(a=>setTimeout(()=>{a.classList.add('fade');setTimeout(()=>a.remove(),400)},4500));
   document.querySelectorAll('[data-confirm]').forEach(el=>el.addEventListener('click',e=>{if(!confirm(el.dataset.confirm))e.preventDefault()}));
