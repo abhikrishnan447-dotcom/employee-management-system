@@ -1,9 +1,11 @@
 from django.urls import path
 from . import views
+from . import visitor_views
 
 urlpatterns = [
     path("", views.index, name="index"),
     path("home/", views.home, name="home"),
+    path("visitor-message/", visitor_views.visitor_message_submit, name="visitor_message_submit"),
 
     path("register/", views.register, name="register"),
     path("register/departments/", views.registration_departments, name="registration_departments"),
@@ -57,5 +59,6 @@ urlpatterns = [
     path("admin/messages/", views.admin_messages, name="admin_messages"),
     path("admin/messages/clear/", views.admin_clear_messages, name="admin_clear_messages"),
     path("admin/messages/<int:message_id>/reply/", views.admin_message_reply, name="admin_message_reply"),
+    path("admin/visitor-messages/", visitor_views.admin_visitor_messages, name="admin_visitor_messages"),
     path("admin/profile/", views.admin_profile, name="admin_profile"),
 ]
