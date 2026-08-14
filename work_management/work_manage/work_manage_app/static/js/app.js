@@ -34,7 +34,6 @@ document.addEventListener('DOMContentLoaded',()=>{
     loader.classList.remove('done');
   };
   if(loader){
-    // Do not wait forever for window.load. The loader is guaranteed to disappear.
     window.addEventListener('load',hideLoader,{once:true});
     hideLoader();
     setTimeout(finishLoader,landingPage?1500:5000);
@@ -46,6 +45,30 @@ document.addEventListener('DOMContentLoaded',()=>{
   const photo=document.querySelector('#profile_photo'),preview=document.querySelector('#photoPreview');
   if(photo&&preview)photo.addEventListener('change',()=>{const file=photo.files[0];if(file){preview.src=URL.createObjectURL(file);preview.style.display='block'}});
   document.querySelectorAll('.forgot-link').forEach(link=>{link.href='/forgot-password/';});
+
+  const contactForm=document.querySelector('#contact-form');
+  if(contactForm){
+    contactForm.addEventListener('submit',async e=>{
+      e.preventDefault();
+      const status=contactForm.querySelector('.form-status');
+      const button=contactForm.querySelector('button[type="submit"]');
+      const formData=new FormData(contactForm);
+      button?.setAttribute('disabled','disabled');
+      if(status)status.textContent='Sending...';
+      try{
+        const response=await fetch('/visitor-message/',{method:'POST',body:formData,headers:{'X-Requested-With':'XMLHttpRequest'}});
+        const data=await response.json();
+        if(!response.ok)throw new Error(data.message||'Unable to send your message.');
+        if(status)status.textContent=data.message;
+        contactForm.reset();
+      }catch(error){
+        if(status)status.textContent=error.message||'Unable to send your message. Please try again.';
+      }finally{
+        button?.removeAttribute('disabled');
+      }
+    });
+  }
+
   document.addEventListener('click',e=>{const link=e.target.closest('a[href]');if(!link||e.defaultPrevented||link.target==='_blank'||link.hasAttribute('download')||link.getAttribute('href')?.startsWith('#')||link.getAttribute('href')?.startsWith('javascript:')||link.closest('#page-loader')||link.matches('[data-no-loader]'))return;showLoader()});
   document.addEventListener('submit',e=>{if(e.defaultPrevented||e.target.matches('[data-no-loader]')||e.target.closest('#page-loader'))return;showLoader()});
 });
