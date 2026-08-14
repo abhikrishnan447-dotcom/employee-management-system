@@ -1,0 +1,1 @@
+function togglePassword(){const input=document.getElementById('password');const icon=document.getElementById('passwordIcon');const visible=input.type==='text';input.type=visible?'password':'text';icon.className=visible?'bi bi-eye':'bi bi-eye-slash';}
