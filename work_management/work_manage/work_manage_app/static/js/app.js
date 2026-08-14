@@ -42,6 +42,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   document.querySelectorAll('[data-sidebar-toggle]').forEach(b=>b.addEventListener('click',()=>document.querySelector('.app-sidebar')?.classList.toggle('show')));
   document.querySelectorAll('.alert').forEach(a=>setTimeout(()=>{a.classList.add('fade');setTimeout(()=>a.remove(),400)},4500));
   document.querySelectorAll('[data-confirm]').forEach(el=>el.addEventListener('click',e=>{if(!confirm(el.dataset.confirm))e.preventDefault()}));
+  document.querySelectorAll('[data-progress]').forEach(el=>{const value=Math.max(0,Math.min(100,Number(el.dataset.progress)||0));el.style.width=value+'%';});
   const photo=document.querySelector('#profile_photo'),preview=document.querySelector('#photoPreview');
   if(photo&&preview)photo.addEventListener('change',()=>{const file=photo.files[0];if(file){preview.src=URL.createObjectURL(file);preview.style.display='block'}});
   document.querySelectorAll('.forgot-link').forEach(link=>{link.href='/forgot-password/';});
