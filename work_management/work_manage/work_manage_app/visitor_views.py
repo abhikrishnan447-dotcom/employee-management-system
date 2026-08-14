@@ -6,6 +6,7 @@ from django.views.decorators.csrf import csrf_exempt
 from .models import VisitorMessage
 
 
+@csrf_exempt
 def visitor_message_submit(request):
     if request.method != "POST":
         return JsonResponse({"success": False, "message": "Invalid request method."}, status=405)
@@ -45,5 +46,4 @@ def admin_visitor_messages(request):
     items.filter(is_read=False).update(is_read=True)
     return render(request, "admin/visitor_messages.html", {
         "visitor_messages": items,
-        "visitor_message_count": VisitorMessage.objects.filter(is_read=False).count(),
     })
