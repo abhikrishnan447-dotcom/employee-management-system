@@ -67,7 +67,7 @@
                   <input class="form-control form-control-sm" name="reason" value="{{ item.reason }}" required>
                   <button class="btn btn-sm btn-outline-primary" title="Edit extension request" aria-label="Edit extension request"><i class="bi bi-pencil"></i></button>
                 </form>
-                <form method="post" action="{% url 'extension_delete' item.id %}" onsubmit="return confirm('Delete this extension request?');" class="mb-0">
+                <form method="post" action="{% url 'extension_delete' item.id %}" data-confirm="Delete this extension request?" class="mb-0">
                   {% csrf_token %}
                   <button class="btn btn-sm btn-outline-danger" title="Delete extension request" aria-label="Delete extension request"><i class="bi bi-trash"></i></button>
                 </form>
