@@ -27,7 +27,7 @@
             <label class="form-label" for="email">Email Address</label>
             <div class="input-wrap"><i class="bi bi-envelope field-icon"></i><input type="email" id="email" name="email" class="form-control" placeholder="Enter your email" required autocomplete="email"></div>
             <label class="form-label" for="password">Password</label>
-            <div class="input-wrap"><i class="bi bi-lock field-icon"></i><input type="password" id="password" name="password" class="form-control" placeholder="Enter your password" required autocomplete="current-password"><button type="button" class="password-toggle" onclick="togglePassword()" aria-label="Show password"><i class="bi bi-eye" id="passwordIcon"></i></button></div>
+            <div class="input-wrap"><i class="bi bi-lock field-icon"></i><input type="password" id="password" name="password" class="form-control" placeholder="Enter your password" required autocomplete="current-password"><button type="button" class="password-toggle" data-password-target="password" aria-label="Show password"><i class="bi bi-eye" id="passwordIcon"></i></button></div>
             <button type="submit" class="login-btn">Sign In <i class="bi bi-arrow-right ms-1"></i></button>
         </form>
         <a href="{% url 'index' %}" class="back-home"><i class="bi bi-arrow-left"></i> Back to Home</a>
