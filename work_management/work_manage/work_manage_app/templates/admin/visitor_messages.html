@@ -1,0 +1,44 @@
+{% extends 'admin/admin_base.html' %}
+{% block title %}Visitor Messages | WorkSphere{% endblock %}
+{% block content %}
+<div class="page-title page-title-actions mb-4">
+  <div>
+    <h1>Visitor Messages</h1>
+    <p>Messages sent by visitors through the public Let's Talk section.</p>
+  </div>
+  {% if visitor_messages %}
+  <form method="post" onsubmit="return confirm('Clear all visitor messages?');">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="clear">
+    <button class="btn btn-outline-danger action-clear"><i class="bi bi-trash3 me-1"></i> Clear Messages</button>
+  </form>
+  {% endif %}
+</div>
+
+<div class="card-pro p-4">
+  {% for item in visitor_messages %}
+  <div class="py-3 border-bottom">
+    <div class="d-flex flex-wrap justify-content-between gap-2">
+      <div>
+        <strong>{{ item.name }}</strong>
+        <div class="small text-primary">{{ item.email }}</div>
+      </div>
+      <span class="small text-secondary">{{ item.created_at|date:'d M Y H:i' }}</span>
+    </div>
+    <p class="mb-3 mt-3">{{ item.message }}</p>
+    <form method="post" class="d-inline" onsubmit="return confirm('Delete this visitor message?');">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="delete">
+      <input type="hidden" name="message_id" value="{{ item.id }}">
+      <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash3"></i> Delete</button>
+    </form>
+  </div>
+  {% empty %}
+  <div class="text-center py-5">
+    <i class="bi bi-chat-square-text fs-1 text-secondary"></i>
+    <h5 class="mt-3">No visitor messages yet</h5>
+    <p class="text-muted mb-0">Messages sent from the public Let's Talk form will appear here.</p>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}
