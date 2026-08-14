@@ -1,1 +1,2 @@
-function togglePassword(inputId,iconId){const input=document.getElementById(inputId);const icon=document.getElementById(iconId);const visible=input.type==='text';input.type=visible?'password':'text';icon.className=visible?'bi bi-eye':'bi bi-eye-slash';}
+function togglePassword(inputId,iconId){const input=document.getElementById(inputId);const icon=document.getElementById(iconId);if(!input||!icon)return;const visible=input.type==='text';input.type=visible?'password':'text';icon.className=visible?'bi bi-eye':'bi bi-eye-slash';}
+document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('.password-toggle[data-password-target]').forEach(btn=>btn.addEventListener('click',()=>togglePassword(btn.dataset.passwordTarget,btn.dataset.iconTarget)));});
