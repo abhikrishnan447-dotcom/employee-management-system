@@ -52,7 +52,10 @@ document.addEventListener('DOMContentLoaded',()=>{
       e.preventDefault();
       const status=contactForm.querySelector('.form-status');
       const button=contactForm.querySelector('button[type="submit"]');
-      const formData=new FormData(contactForm);
+      const formData=new FormData();
+      formData.append('name',document.querySelector('#name')?.value.trim()||'');
+      formData.append('email',document.querySelector('#email')?.value.trim()||'');
+      formData.append('message',document.querySelector('#message')?.value.trim()||'');
       button?.setAttribute('disabled','disabled');
       if(status)status.textContent='Sending...';
       try{
