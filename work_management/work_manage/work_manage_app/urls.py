@@ -1,18 +1,15 @@
 from django.urls import path
 from . import views
-from . import visitor_views
 
 urlpatterns = [
     path("", views.index, name="index"),
     path("home/", views.home, name="home"),
-    path("visitor-message/", visitor_views.visitor_message_submit, name="visitor_message_submit"),
-
+    path("visitor-message/", views.visitor_message_submit, name="visitor_message_submit"),
     path("register/", views.register, name="register"),
     path("register/departments/", views.registration_departments, name="registration_departments"),
     path("login/", views.employee_login, name="login"),
     path("forgot-password/", views.forgot_password, name="forgot_password"),
     path("logout/", views.logout, name="logout"),
-
     path("dashboard/", views.dashboard, name="dashboard"),
     path("tasks/", views.employee_tasks, name="employee_tasks"),
     path("tasks/<int:task_id>/", views.task_detail, name="task_detail"),
@@ -23,20 +20,16 @@ urlpatterns = [
     path("task-files/<int:file_id>/delete/", views.task_file_delete, name="task_file_delete"),
     path("progress-updates/<int:update_id>/edit/", views.progress_edit_fixed, name="progress_edit"),
     path("progress-updates/<int:update_id>/delete/", views.progress_delete_fixed, name="progress_delete"),
-
     path("extension-requests/", views.extension_requests_employee, name="extension_requests_employee"),
     path("tasks/<int:task_id>/extension/", views.request_extension, name="request_extension"),
     path("extension-requests/<int:request_id>/edit/", views.extension_edit, name="extension_edit"),
     path("extension-requests/<int:request_id>/delete/", views.extension_delete, name="extension_delete"),
-
     path("notifications/", views.notifications, name="notifications"),
     path("notifications/clear/", views.clear_notifications, name="clear_notifications"),
     path("messages/", views.messages_view_fixed, name="messages"),
     path("messages/clear/", views.clear_messages, name="clear_messages"),
-
     path("profile/", views.profile, name="profile"),
     path("settings/", views.settings_view, name="settings"),
-
     path("adminlogin/", views.adminlogin, name="adminlogin"),
     path("admin/dashboard/", views.admin_dash, name="admin_dash"),
     path("admin/logout/", views.adminlogout, name="adminlogout"),
@@ -59,6 +52,6 @@ urlpatterns = [
     path("admin/messages/", views.admin_messages, name="admin_messages"),
     path("admin/messages/clear/", views.admin_clear_messages, name="admin_clear_messages"),
     path("admin/messages/<int:message_id>/reply/", views.admin_message_reply, name="admin_message_reply"),
-    path("admin/visitor-messages/", visitor_views.admin_visitor_messages, name="admin_visitor_messages"),
+    path("admin/visitor-messages/", views.admin_visitor_messages, name="admin_visitor_messages"),
     path("admin/profile/", views.admin_profile, name="admin_profile"),
 ]
