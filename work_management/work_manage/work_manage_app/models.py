@@ -1,6 +1,9 @@
 from django.db import models
 
 
+# ==============================
+# DEPARTMENT / EMPLOYEE MODELS
+# ==============================
 class Department(models.Model):
     name = models.CharField(max_length=100, unique=True)
     description = models.TextField(blank=True)
@@ -32,6 +35,9 @@ class EmployeeDepartment(models.Model):
         return f"{self.employee.name} - {self.department or 'Unassigned'}"
 
 
+# ==============================
+# TASK / PROGRESS / FILE MODELS
+# ==============================
 class Task(models.Model):
     STATUS_CHOICES = (("Pending", "Pending"), ("In Progress", "In Progress"), ("Completed", "Completed"), ("Overdue", "Overdue"))
     PRIORITY_CHOICES = (("Low", "Low"), ("Medium", "Medium"), ("High", "High"))
@@ -83,6 +89,9 @@ class TaskFile(models.Model):
         return f"{self.task.title} - {self.employee.name}"
 
 
+# ==============================
+# EXTENSION / NOTIFICATION / MESSAGE MODELS
+# ==============================
 class ExtensionRequest(models.Model):
     STATUS_CHOICES = (("Pending", "Pending"), ("Approved", "Approved"), ("Rejected", "Rejected"))
     task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name="extension_requests")
