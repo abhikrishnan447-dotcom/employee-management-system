@@ -41,6 +41,7 @@ TEMPLATES = [{
         "django.contrib.auth.context_processors.auth",
         "django.contrib.messages.context_processors.messages",
         "work_manage_app.views.notification_badges",
+        "work_manage_app.context_processors.visitor_message_badge",
     ]},
 }]
 WSGI_APPLICATION = "work_manage.wsgi.application"
