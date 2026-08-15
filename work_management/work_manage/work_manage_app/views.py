@@ -7,7 +7,9 @@ from django.core.mail import send_mail
 from django.db.models import Avg, Count, Q
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.views.decorators.csrf import csrf_exempt
 
 from .models import (
     Department,
@@ -19,6 +21,7 @@ from .models import (
     Register,
     Task,
     TaskFile,
+    VisitorMessage,
 )
 
 
@@ -160,6 +163,50 @@ def forgot_password(request):
 def logout(request):
     request.session.flush()
     return redirect("index")
+
+
+# ==============================
+# VISITOR MESSAGES
+# ==============================
+@csrf_exempt
+def visitor_message_submit(request):
+    if request.method != "POST":
+        return JsonResponse({"success": False, "message": "Invalid request method."}, status=405)
+
+    name = request.POST.get("name", "").strip()
+    email = request.POST.get("email", "").strip().lower()
+    message = request.POST.get("message", "").strip()
+
+    if not name or len(name) < 2:
+        return JsonResponse({"success": False, "message": "Please enter your name."}, status=400)
+    if not email or "@" not in email:
+        return JsonResponse({"success": False, "message": "Please enter a valid email address."}, status=400)
+    if not message or len(message) < 3:
+        return JsonResponse({"success": False, "message": "Please enter a message."}, status=400)
+
+    VisitorMessage.objects.create(name=name, email=email, message=message)
+    return JsonResponse({"success": True, "message": "Thanks! Your message has been sent successfully."})
+
+
+def admin_visitor_messages(request):
+    if not request.session.get("admin"):
+        return redirect("adminlogin")
+
+    if request.method == "POST":
+        action = request.POST.get("action")
+        message_id = request.POST.get("message_id")
+        if action == "delete" and message_id:
+            item = get_object_or_404(VisitorMessage, id=message_id)
+            item.delete()
+            messages.success(request, "Visitor message deleted.")
+        elif action == "clear":
+            VisitorMessage.objects.all().delete()
+            messages.success(request, "All visitor messages cleared.")
+        return redirect("admin_visitor_messages")
+
+    items = VisitorMessage.objects.all()
+    items.filter(is_read=False).update(is_read=True)
+    return render(request, "admin/visitor_messages.html", {"visitor_messages": items})
 
 
 # ==============================
@@ -366,12 +413,7 @@ def request_extension(request, task_id):
         requested_deadline = request.POST.get("requested_deadline")
         reason = request.POST.get("reason", "").strip()
         if requested_deadline and reason:
-            ExtensionRequest.objects.create(
-                task=task,
-                employee=user,
-                requested_deadline=requested_deadline,
-                reason=reason,
-            )
+            ExtensionRequest.objects.create(task=task, employee=user, requested_deadline=requested_deadline, reason=reason)
             messages.success(request, "Extension request submitted successfully.")
         else:
             messages.error(request, "Please provide a new deadline and reason.")
@@ -444,13 +486,7 @@ def messages_view_fixed(request):
         subject = request.POST.get("subject", "").strip()
         body = request.POST.get("body", "").strip()
         if recipient_id == "admin":
-            Message.objects.create(
-                sender=user,
-                recipient=None,
-                subject=subject,
-                body=body,
-                is_admin_recipient=True,
-            )
+            Message.objects.create(sender=user, recipient=None, subject=subject, body=body, is_admin_recipient=True)
             messages.success(request, "Message sent to administrator.")
         elif recipient_id and subject and body:
             recipient = get_object_or_404(Register, id=recipient_id, status="Active")
@@ -497,6 +533,8 @@ def admin_dash(request):
         "total_employees": Register.objects.count(),
         "active_employees": Register.objects.filter(status="Active").count(),
         "total_tasks": Task.objects.count(),
+        "pending_tasks": Task.objects.filter(status="Pending").count(),
+        "progress_tasks": Task.objects.filter(status="In Progress").count(),
         "pending_extensions": ExtensionRequest.objects.filter(status="Pending").count(),
         "completed_tasks": Task.objects.filter(status="Completed").count(),
         "employees": Register.objects.select_related("department").order_by("name")[:8],
@@ -511,10 +549,7 @@ def adminlogout(request):
 def employee_management(request):
     if not is_admin(request):
         return redirect("adminlogin")
-    return render(request, "admin/employees.html", {
-        "employees": Register.objects.select_related("department").order_by("name"),
-        "departments": Department.objects.all(),
-    })
+    return render(request, "admin/employees.html", {"employees": Register.objects.select_related("department").order_by("name"), "departments": Department.objects.all()})
 
 
 def employee_edit(request, employee_id):
@@ -535,11 +570,7 @@ def employee_edit(request, employee_id):
             EmployeeDepartment.objects.filter(employee=employee).update(department=None)
         messages.success(request, "Employee updated.")
         return redirect("employee_management")
-    return render(request, "admin/employee_form.html", {
-        "employee": employee,
-        "departments": Department.objects.all(),
-        "assignment": getattr(employee, "department_assignment", None),
-    })
+    return render(request, "admin/employee_form.html", {"employee": employee, "departments": Department.objects.all(), "assignment": getattr(employee, "department_assignment", None)})
 
 
 def employee_delete(request, employee_id):
@@ -562,9 +593,7 @@ def department_management(request):
         if name:
             Department.objects.get_or_create(name=name, defaults={"description": description})
         return redirect("department_management")
-    return render(request, "admin/departments.html", {
-        "departments": Department.objects.annotate(employee_count=Count("employees")),
-    })
+    return render(request, "admin/departments.html", {"departments": Department.objects.annotate(employee_count=Count("employees"))})
 
 
 def department_delete(request, department_id):
@@ -575,17 +604,10 @@ def department_delete(request, department_id):
     return redirect("department_management")
 
 
-# ==============================
-# ADMIN TASKS / FILES / EXTENSIONS
-# ==============================
 def task_management(request):
     if not is_admin(request):
         return redirect("adminlogin")
-    return render(request, "admin/tasks.html", {
-        "tasks": Task.objects.select_related("assigned_to", "department").prefetch_related("assigned_employees", "uploaded_files__employee"),
-        "employees": Register.objects.filter(status="Active"),
-        "departments": Department.objects.all(),
-    })
+    return render(request, "admin/tasks.html", {"tasks": Task.objects.select_related("assigned_to", "department").prefetch_related("assigned_employees", "uploaded_files__employee"), "employees": Register.objects.filter(status="Active"), "departments": Department.objects.all()})
 
 
 def assign_task(request):
@@ -597,26 +619,13 @@ def assign_task(request):
         if not employees:
             messages.error(request, "Please select at least one employee.")
             return redirect("task_management")
-        task = Task.objects.create(
-            title=request.POST.get("title", "").strip(),
-            description=request.POST.get("description", "").strip(),
-            assigned_to=employees[0],
-            department_id=request.POST.get("department") or None,
-            deadline=request.POST.get("deadline"),
-            priority=request.POST.get("priority", "Medium"),
-        )
+        task = Task.objects.create(title=request.POST.get("title", "").strip(), description=request.POST.get("description", "").strip(), assigned_to=employees[0], department_id=request.POST.get("department") or None, deadline=request.POST.get("deadline"), priority=request.POST.get("priority", "Medium"))
         task.assigned_employees.set(employees)
         for employee in employees:
             Notification.objects.create(recipient=employee, title="New task assigned", message=f"You have been assigned: {task.title}")
             if employee.email:
                 try:
-                    send_mail(
-                        "WorkSphere - New Task Assigned",
-                        f"Hello {employee.name},\n\nA new task has been assigned to you.\n\nTask: {task.title}\nDescription: {task.description}\nPriority: {task.priority}\nDeadline: {task.deadline}",
-                        None,
-                        [employee.email],
-                        fail_silently=True,
-                    )
+                    send_mail("WorkSphere - New Task Assigned", f"Hello {employee.name},\n\nA new task has been assigned to you.\n\nTask: {task.title}\nDescription: {task.description}\nPriority: {task.priority}\nDeadline: {task.deadline}", None, [employee.email], fail_silently=True)
                 except Exception:
                     pass
         messages.success(request, f"Task assigned to {len(employees)} employee(s).")
@@ -643,12 +652,7 @@ def task_edit(request, task_id):
         task.assigned_employees.set(employees)
         messages.success(request, "Task updated successfully.")
         return redirect("task_management")
-    return render(request, "admin/task_form.html", {
-        "task": task,
-        "employees": Register.objects.filter(status="Active"),
-        "departments": Department.objects.all(),
-        "selected_employees": task.assigned_employees.all(),
-    })
+    return render(request, "admin/task_form.html", {"task": task, "employees": Register.objects.filter(status="Active"), "departments": Department.objects.all(), "selected_employees": task.assigned_employees.all()})
 
 
 def task_delete(request, task_id):
@@ -665,9 +669,7 @@ def task_delete(request, task_id):
 def admin_task_files(request):
     if not is_admin(request):
         return redirect("adminlogin")
-    return render(request, "admin/task_files.html", {
-        "files": TaskFile.objects.select_related("task", "employee").all(),
-    })
+    return render(request, "admin/task_files.html", {"files": TaskFile.objects.select_related("task", "employee").all()})
 
 
 def admin_task_file_delete(request, file_id):
@@ -684,9 +686,7 @@ def admin_task_file_delete(request, file_id):
 def extension_requests(request):
     if not is_admin(request):
         return redirect("adminlogin")
-    return render(request, "admin/extensions.html", {
-        "requests": ExtensionRequest.objects.select_related("task", "employee").all(),
-    })
+    return render(request, "admin/extensions.html", {"requests": ExtensionRequest.objects.select_related("task", "employee").all()})
 
 
 def extension_action(request, request_id, action):
@@ -700,29 +700,16 @@ def extension_action(request, request_id, action):
         if extension.status == "Approved":
             extension.task.deadline = extension.requested_deadline
             extension.task.save(update_fields=["deadline"])
-        Notification.objects.create(
-            recipient=extension.employee,
-            title=f"Extension {extension.status}",
-            message=f"Your extension request for {extension.task.title} was {extension.status.lower()}.",
-        )
+        Notification.objects.create(recipient=extension.employee, title=f"Extension {extension.status}", message=f"Your extension request for {extension.task.title} was {extension.status.lower()}.")
     return redirect("extension_requests")
 
 
-# ==============================
-# ADMIN REPORTS / NOTIFICATIONS / MESSAGES / PROFILE
-# ==============================
 def reports(request):
     if not is_admin(request):
         return redirect("adminlogin")
     tasks = Task.objects.all()
     by_department = Department.objects.annotate(task_count=Count("tasks")).order_by("name")
-    return render(request, "admin/reports.html", {
-        "total": tasks.count(),
-        "pending": tasks.filter(status="Pending").count(),
-        "progress": tasks.filter(status="In Progress").count(),
-        "completed": tasks.filter(status="Completed").count(),
-        "by_department": by_department,
-    })
+    return render(request, "admin/reports.html", {"total": tasks.count(), "pending": tasks.filter(status="Pending").count(), "progress": tasks.filter(status="In Progress").count(), "completed": tasks.filter(status="Completed").count(), "by_department": by_department})
 
 
 def admin_notifications(request):
@@ -748,25 +735,12 @@ def admin_messages(request):
     if request.method == "POST":
         recipient_id = request.POST.get("recipient")
         recipient = get_object_or_404(Register, id=recipient_id, status="Active")
-        Message.objects.create(
-            sender=None,
-            recipient=recipient,
-            subject=request.POST.get("subject", "").strip(),
-            body=request.POST.get("body", "").strip(),
-            is_admin_sender=True,
-        )
-        Notification.objects.create(
-            recipient=recipient,
-            title="New message from administrator",
-            message="You have received a new message from the administrator.",
-        )
+        Message.objects.create(sender=None, recipient=recipient, subject=request.POST.get("subject", "").strip(), body=request.POST.get("body", "").strip(), is_admin_sender=True)
+        Notification.objects.create(recipient=recipient, title="New message from administrator", message="You have received a new message from the administrator.")
         messages.success(request, "Message sent successfully.")
     messages_list = Message.objects.filter(Q(is_admin_sender=True) | Q(is_admin_recipient=True)).select_related("sender", "recipient")
     Message.objects.filter(is_admin_recipient=True, is_read=False).update(is_read=True)
-    return render(request, "admin/messages.html", {
-        "messages_list": messages_list,
-        "employees": Register.objects.filter(status="Active").order_by("name"),
-    })
+    return render(request, "admin/messages.html", {"messages_list": messages_list, "employees": Register.objects.filter(status="Active").order_by("name")})
 
 
 def admin_clear_messages(request):
@@ -785,18 +759,8 @@ def admin_message_reply(request, message_id):
     if request.method == "POST" and original.sender:
         subject = request.POST.get("subject", f"Re: {original.subject}").strip()
         body = request.POST.get("body", "").strip()
-        Message.objects.create(
-            sender=None,
-            recipient=original.sender,
-            subject=subject,
-            body=body,
-            is_admin_sender=True,
-        )
-        Notification.objects.create(
-            recipient=original.sender,
-            title="Admin replied to your message",
-            message=f"The administrator replied to your message: {original.subject}",
-        )
+        Message.objects.create(sender=None, recipient=original.sender, subject=subject, body=body, is_admin_sender=True)
+        Notification.objects.create(recipient=original.sender, title="Admin replied to your message", message=f"The administrator replied to your message: {original.subject}")
         messages.success(request, f"Reply sent to {original.sender.name}.")
     return redirect("admin_messages")
 
@@ -850,68 +814,34 @@ def admin_profile(request):
     return render(request, "admin/profile.html", {"admin_email": request.session.get("admin", ADMIN_EMAIL)})
 
 
-# ==============================
-# GLOBAL TEMPLATE CONTEXT PROCESSOR
-# ==============================
 def notification_badges(request):
     employee = current_employee(request)
     employee_notification_count = employee.notifications.filter(is_read=False).count() if employee else 0
     employee_message_count = Message.objects.filter(recipient=employee, is_read=False).count() if employee else 0
     if not is_admin(request):
-        return {
-            "admin_notification_count": 0,
-            "admin_message_count": 0,
-            "admin_extension_count": 0,
-            "employee_notification_count": employee_notification_count,
-            "employee_message_count": employee_message_count,
-        }
-    return {
-        "admin_notification_count": Notification.objects.filter(recipient__isnull=True, is_read=False).count(),
-        "admin_message_count": Message.objects.filter(is_admin_recipient=True, is_read=False).count(),
-        "admin_extension_count": ExtensionRequest.objects.filter(status="Pending").count(),
-        "employee_notification_count": employee_notification_count,
-        "employee_message_count": employee_message_count,
-    }
+        return {"admin_notification_count": 0, "admin_message_count": 0, "admin_extension_count": 0, "employee_notification_count": employee_notification_count, "employee_message_count": employee_message_count}
+    return {"admin_notification_count": Notification.objects.filter(recipient__isnull=True, is_read=False).count(), "admin_message_count": Message.objects.filter(is_admin_recipient=True, is_read=False).count(), "admin_extension_count": ExtensionRequest.objects.filter(status="Pending").count(), "employee_notification_count": employee_notification_count, "employee_message_count": employee_message_count}
 
 
-# ==============================
-# NOTIFICATION SIGNALS
-# ==============================
 @receiver(post_save, sender=Message, dispatch_uid="worksphere_admin_message_notification")
 def notify_admin_about_employee_message(sender, instance, created, **kwargs):
     if created and instance.is_admin_recipient and instance.sender_id:
-        Notification.objects.create(
-            recipient=None,
-            title="New employee message",
-            message=f"{instance.sender.name} sent a message to the administrator.",
-        )
+        Notification.objects.create(recipient=None, title="New employee message", message=f"{instance.sender.name} sent a message to the administrator.")
 
 
 @receiver(post_save, sender=ExtensionRequest, dispatch_uid="worksphere_admin_extension_notification")
 def notify_admin_about_extension_request(sender, instance, created, **kwargs):
     if created:
-        Notification.objects.create(
-            recipient=None,
-            title="New extension request",
-            message=f"{instance.employee.name} requested an extension for {instance.task.title}.",
-        )
+        Notification.objects.create(recipient=None, title="New extension request", message=f"{instance.employee.name} requested an extension for {instance.task.title}.")
 
 
 @receiver(post_save, sender=ProgressUpdate, dispatch_uid="worksphere_admin_progress_notification")
 def notify_admin_about_progress_update(sender, instance, created, **kwargs):
     if created:
-        Notification.objects.create(
-            recipient=None,
-            title="Employee progress updated",
-            message=f"{instance.employee.name} updated progress for {instance.task.title} to {instance.progress}%.",
-        )
+        Notification.objects.create(recipient=None, title="Employee progress updated", message=f"{instance.employee.name} updated progress for {instance.task.title} to {instance.progress}%.")
 
 
 @receiver(post_save, sender=TaskFile, dispatch_uid="worksphere_admin_file_notification")
 def notify_admin_about_employee_file(sender, instance, created, **kwargs):
     if created:
-        Notification.objects.create(
-            recipient=None,
-            title="New employee file uploaded",
-            message=f"{instance.employee.name} uploaded a file for {instance.task.title}.",
-        )
+        Notification.objects.create(recipient=None, title="New employee file uploaded", message=f"{instance.employee.name} uploaded a file for {instance.task.title}.")
