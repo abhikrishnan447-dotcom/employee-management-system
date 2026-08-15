@@ -52,9 +52,14 @@ document.addEventListener('DOMContentLoaded',()=>{
       if(status)status.textContent='Sending...';
 
       try{
+        const formData=new FormData();
+        formData.append('name',form.querySelector('#name')?.value.trim()||'');
+        formData.append('email',form.querySelector('#email')?.value.trim()||'');
+        formData.append('message',form.querySelector('#message')?.value.trim()||'');
+
         const response=await fetch('/visitor-message/',{
           method:'POST',
-          body:new FormData(form),
+          body:formData,
           headers:{'X-Requested-With':'XMLHttpRequest'}
         });
         const data=await response.json();
