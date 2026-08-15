@@ -3,6 +3,9 @@ from django.contrib import admin
 from .models import Department, EmployeeDepartment, ExtensionRequest, Message, Notification, ProgressUpdate, Register, Task
 
 
+# ==============================
+# EMPLOYEE / DEPARTMENT ADMIN
+# ==============================
 @admin.register(Register)
 class RegisterAdmin(admin.ModelAdmin):
     list_display = ("name", "email", "phone", "status")
@@ -25,6 +28,9 @@ class EmployeeDepartmentAdmin(admin.ModelAdmin):
         return obj.employee.designation
 
 
+# ==============================
+# TASK / PROGRESS ADMIN
+# ==============================
 @admin.register(Task)
 class TaskAdmin(admin.ModelAdmin):
     list_display = ("title", "assigned_to", "deadline", "status", "priority", "progress")
@@ -43,6 +49,9 @@ class ExtensionRequestAdmin(admin.ModelAdmin):
     list_filter = ("status",)
 
 
+# ==============================
+# NOTIFICATION / MESSAGE ADMIN
+# ==============================
 @admin.register(Notification)
 class NotificationAdmin(admin.ModelAdmin):
     list_display = ("title", "recipient", "is_read", "created_at")
