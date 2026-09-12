@@ -1,6 +1,7 @@
 from datetime import date, timedelta
 
 from django.test import TestCase
+from django.core.files.uploadedfile import SimpleUploadedFile
 
 from .models import ProgressUpdate, Register, Task, TaskFile
 from .views import employee_progress, sync_task_progress
@@ -170,3 +171,23 @@ class WorkProgressTests(TestCase):
         response = self.client.get("/admin/employees/")
         self.assertContains(response, "Designation")
         self.assertContains(response, "Software Engineer")
+
+    def test_registration_has_password_toggles_and_rejects_photos_over_15_mb(self):
+        response = self.client.get("/register/")
+        self.assertContains(response, 'data-target="password"')
+        self.assertContains(response, 'data-target="confirmPassword"')
+
+        oversized_photo = SimpleUploadedFile(
+            "large.png",
+            b"x" * (15 * 1024 * 1024 + 1),
+            content_type="image/png",
+        )
+        response = self.client.post("/register/", {
+            "name": "Large Photo",
+            "email": "large-photo@example.com",
+            "phone": "9876543214",
+            "password": "Strong#123",
+            "confirm_password": "Strong#123",
+            "profile_photo": oversized_photo,
+        })
+        self.assertContains(response, "Profile photo must be smaller than 15 MB.")

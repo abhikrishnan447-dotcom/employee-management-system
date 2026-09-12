@@ -113,8 +113,8 @@ def register(request):
             )
         elif password != confirm_password:
             messages.error(request, "Passwords do not match.")
-        elif profile_photo and profile_photo.size > 10 * 1024 * 1024:
-            messages.error(request, "Profile photo must be smaller than 10 MB.")
+        elif profile_photo and profile_photo.size > 15 * 1024 * 1024:
+            messages.error(request, "Profile photo must be smaller than 15 MB.")
         else:
             employee = Register.objects.create(
                 name=name,
