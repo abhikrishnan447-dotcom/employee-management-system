@@ -591,6 +591,7 @@ def admin_dash(request):
     return render(request, "admin/dashboard.html", {
         "total_employees": Register.objects.count(),
         "active_employees": Register.objects.filter(status="Active").count(),
+        "inactive_employees": Register.objects.filter(status="Inactive").count(),
         "pending_approval": Register.objects.filter(status="Pending").count(),
         "total_departments": Department.objects.count(),
         "total_tasks": Task.objects.count(),

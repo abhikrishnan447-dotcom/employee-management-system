@@ -77,3 +77,34 @@ class WorkProgressTests(TestCase):
         self.assertEqual(response["Content-Type"], "application/pdf")
         self.assertIn("attachment", response["Content-Disposition"])
         self.assertTrue(response.content.startswith(b"%PDF-1.4"))
+
+    def test_admin_dashboard_includes_all_requested_counters(self):
+        Register.objects.create(
+            name="Inactive Employee",
+            email="inactive@example.com",
+            phone="9876543212",
+            password="unused",
+            status="Inactive",
+        )
+        Task.objects.create(
+            title="Pending task",
+            description="Dashboard test task",
+            assigned_to=self.employee,
+            deadline=date.today() + timedelta(days=7),
+            status="Pending",
+        )
+        Task.objects.create(
+            title="In progress task",
+            description="Dashboard test task",
+            assigned_to=self.employee,
+            deadline=date.today() + timedelta(days=7),
+            status="In Progress",
+        )
+        session = self.client.session
+        session["admin"] = "admin@gmail.com"
+        session.save()
+
+        response = self.client.get("/admin/dashboard/")
+        self.assertContains(response, "Pending Works")
+        self.assertContains(response, "In Progress Works")
+        self.assertContains(response, "Inactive Employees")
