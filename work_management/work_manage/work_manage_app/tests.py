@@ -66,7 +66,28 @@ class WorkProgressTests(TestCase):
         self.assertEqual(response.context["overall_progress"], 50)
         self.assertEqual(response.context["completed_work_units"], 50)
         self.assertEqual(response.context["remaining_work_units"], 50)
-        self.assertContains(response, "50% overall work completed")
+        self.assertContains(response, "Overall Progress")
+        self.assertContains(response, "<strong>50%</strong>", html=False)
+
+    def test_employee_dashboard_shows_teammate_progress_for_shared_work(self):
+        teammate = Register.objects.create(
+            name="Teammate",
+            email="teammate@example.com",
+            phone="9876543213",
+            password="unused",
+            status="Active",
+        )
+        self.task.assigned_employees.set([self.employee, teammate])
+        ProgressUpdate.objects.create(task=self.task, employee=self.employee, progress=20)
+        ProgressUpdate.objects.create(task=self.task, employee=teammate, progress=40)
+        session = self.client.session
+        session["user_id"] = self.employee.id
+        session.save()
+
+        response = self.client.get("/dashboard/")
+        self.assertContains(response, "Team Progress")
+        self.assertContains(response, "Teammate")
+        self.assertContains(response, "40%")
 
     def test_pending_employee_cannot_log_in(self):
         pending = Register.objects.create(
@@ -138,3 +159,14 @@ class WorkProgressTests(TestCase):
         response = self.client.get("/admin/dashboard/")
         self.assertEqual(response.context["pending_file_reviews"], 1)
         self.assertContains(response, "Pending File Reviews")
+
+    def test_employee_management_displays_designation(self):
+        self.employee.designation = "Software Engineer"
+        self.employee.save(update_fields=["designation"])
+        session = self.client.session
+        session["admin"] = "admin@gmail.com"
+        session.save()
+
+        response = self.client.get("/admin/employees/")
+        self.assertContains(response, "Designation")
+        self.assertContains(response, "Software Engineer")

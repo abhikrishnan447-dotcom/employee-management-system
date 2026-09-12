@@ -241,6 +241,7 @@ def dashboard(request):
         return redirect("login")
     tasks = employee_task_queryset(user)
     task_rows = []
+    team_progress_rows = []
     for task in tasks:
         extension = task.extension_requests.filter(employee=user).first()
         progress_value = employee_progress(task, user)
@@ -251,6 +252,15 @@ def dashboard(request):
             "latest_progress": progress_value,
             "display_status": status,
         })
+        teammates = []
+        for teammate in task.employees().exclude(id=user.id):
+            teammates.append({
+                "name": teammate.name,
+                "progress": employee_progress(task, teammate),
+                "photo": teammate.profile_photo,
+            })
+        if teammates:
+            team_progress_rows.append({"task": task, "teammates": teammates})
     pending = sum(row["display_status"] == "Pending" for row in task_rows)
     in_progress = sum(row["display_status"] == "In Progress" for row in task_rows)
     completed = sum(row["display_status"] == "Completed" for row in task_rows)
@@ -267,6 +277,7 @@ def dashboard(request):
         "completed_work_units": completed_work_units,
         "remaining_work_units": remaining_work_units,
         "overall_progress": overall_progress,
+        "team_progress_rows": team_progress_rows,
     })
 
 
