@@ -64,7 +64,11 @@ def sync_task_progress(task):
     employees = list(task.employees())
     values = [employee_progress(task, employee) for employee in employees]
     task.progress = round(sum(values) / len(values)) if values else 0
-    task.status = "Completed" if values and all(value == 100 for value in values) else "In Progress" if task.progress else "Pending"
+    # A zero-percent "Task started" update is still a started task. This keeps
+    # employee and administrator dashboards in sync after a later progress
+    # milestone is edited or deleted.
+    has_started_work = task.updates.exists()
+    task.status = "Completed" if values and all(value == 100 for value in values) else "In Progress" if task.progress or has_started_work else "Pending"
     if task.deadline < date.today() and task.status != "Completed":
         task.status = "Overdue"
     task.save(update_fields=["progress", "status"])
@@ -73,6 +77,18 @@ def sync_task_progress(task):
 
 def task_is_overdue(task):
     return task.deadline < date.today() and task.status != "Completed"
+
+
+def employee_task_status(task, employee):
+    """Return one employee's status, including a zero-percent started task."""
+    progress = employee_progress(task, employee)
+    if progress == 100:
+        return "Completed"
+    if task.updates.filter(employee=employee).exists():
+        return "In Progress"
+    if task_is_overdue(task):
+        return "Overdue"
+    return "Pending"
 
 
 # ==============================
@@ -245,7 +261,7 @@ def dashboard(request):
     for task in tasks:
         extension = task.extension_requests.filter(employee=user).first()
         progress_value = employee_progress(task, user)
-        status = "Completed" if progress_value == 100 else "Overdue" if task_is_overdue(task) else "In Progress" if progress_value else "Pending"
+        status = employee_task_status(task, user)
         task_rows.append({
             "task": task,
             "extension_status": extension.status if extension else "Not Requested",
@@ -288,12 +304,7 @@ def employee_tasks(request):
     tasks = list(employee_task_queryset(user))
     for task in tasks:
         task.employee_progress = employee_progress(task, user)
-        task.employee_status = (
-            "Completed" if task.employee_progress == 100
-            else "Overdue" if task_is_overdue(task)
-            else "In Progress" if task.employee_progress
-            else "Pending"
-        )
+        task.employee_status = employee_task_status(task, user)
     return render(request, "employee/tasks.html", {"user": user, "tasks": tasks})
 
 
@@ -309,6 +320,7 @@ def task_detail(request, task_id):
         "extensions": task.extension_requests.filter(employee=user),
         "files": task.uploaded_files.filter(employee=user),
         "employee_progress": employee_progress(task, user),
+        "employee_status": employee_task_status(task, user),
     })
 
 
@@ -318,7 +330,17 @@ def start_task(request, task_id):
         return redirect("login")
     task = get_object_or_404(employee_task_queryset(user), id=task_id)
     if request.method == "POST":
-        if task.status == "Pending":
+        if task.status == "Completed":
+            messages.info(request, "This task is already completed.")
+        elif task.updates.filter(employee=user).exists():
+            messages.info(request, "You have already started this task.")
+        else:
+            ProgressUpdate.objects.create(
+                task=task,
+                employee=user,
+                progress=0,
+                note="Task started.",
+            )
             task.status = "In Progress"
             task.save(update_fields=["status"])
             Notification.objects.create(
@@ -327,10 +349,6 @@ def start_task(request, task_id):
                 message=f"{user.name} started the task: {task.title}",
             )
             messages.success(request, "Task started. Status changed to In Progress.")
-        elif task.status == "In Progress":
-            messages.info(request, "This task is already in progress.")
-        else:
-            messages.info(request, "This task is already completed.")
     return redirect("progress_updates")
 
 
@@ -401,6 +419,7 @@ def progress_updates(request):
     tasks = list(employee_task_queryset(user))
     for task in tasks:
         task.employee_progress = employee_progress(task, user)
+        task.employee_status = employee_task_status(task, user)
         task.employee_files = task.uploaded_files.filter(employee=user)
     return render(request, "employee/progress_updates.html", {
         "user": user,

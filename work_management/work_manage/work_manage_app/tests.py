@@ -226,3 +226,44 @@ class WorkProgressTests(TestCase):
             "profile_photo": oversized_photo,
         })
         self.assertContains(response, "Profile photo must be smaller than 15 MB.")
+
+    def test_start_task_marks_employee_and_admin_views_in_progress(self):
+        session = self.client.session
+        session["user_id"] = self.employee.id
+        session.save()
+
+        response = self.client.post(f"/tasks/{self.task.id}/start/")
+        self.assertRedirects(response, "/progress-updates/")
+        self.task.refresh_from_db()
+        self.assertEqual(self.task.status, "In Progress")
+        self.assertTrue(ProgressUpdate.objects.filter(task=self.task, employee=self.employee, progress=0).exists())
+
+        dashboard = self.client.get("/dashboard/")
+        self.assertEqual(dashboard.context["pending"], 0)
+        self.assertEqual(dashboard.context["progress"], 1)
+        self.assertContains(dashboard, "In Progress")
+        self.assertContains(self.client.get("/tasks/"), "In Progress")
+        self.assertContains(self.client.get("/progress-updates/"), "Started")
+
+        self.client.logout()
+        admin_session = self.client.session
+        admin_session["admin"] = "admin@gmail.com"
+        admin_session.save()
+        self.assertEqual(self.client.get("/admin/dashboard/").context["progress_tasks"], 1)
+
+    def test_started_task_stays_in_progress_after_milestone_is_deleted(self):
+        started = ProgressUpdate.objects.create(
+            task=self.task,
+            employee=self.employee,
+            progress=0,
+            note="Task started.",
+        )
+        milestone = ProgressUpdate.objects.create(task=self.task, employee=self.employee, progress=25)
+        sync_task_progress(self.task)
+        milestone.delete()
+        sync_task_progress(self.task)
+
+        self.task.refresh_from_db()
+        self.assertEqual(self.task.progress, 0)
+        self.assertEqual(self.task.status, "In Progress")
+        self.assertTrue(ProgressUpdate.objects.filter(id=started.id).exists())
