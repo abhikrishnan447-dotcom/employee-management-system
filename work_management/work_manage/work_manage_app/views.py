@@ -631,7 +631,15 @@ def adminlogout(request):
 def employee_management(request):
     if not is_admin(request):
         return redirect("adminlogin")
-    return render(request, "admin/employees.html", {"employees": Register.objects.select_related("department").order_by("name"), "departments": Department.objects.all()})
+    selected_status = request.GET.get("status", "")
+    employees = Register.objects.select_related("department").order_by("name")
+    if selected_status in {"Pending", "Active", "Inactive"}:
+        employees = employees.filter(status=selected_status)
+    return render(request, "admin/employees.html", {
+        "employees": employees,
+        "departments": Department.objects.all(),
+        "selected_status": selected_status,
+    })
 
 
 def employee_edit(request, employee_id):

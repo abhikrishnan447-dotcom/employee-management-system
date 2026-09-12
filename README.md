@@ -1,135 +1,102 @@
-# Employee Management System
+# WorkSphere — Employee Work Management System
 
-A Django-based Employee Management System for managing employees, departments, tasks, progress updates, extension requests, notifications, messages, and visitor messages.
+WorkSphere is a Django application for managing an organisation's employees, departments, assigned work, progress updates, submitted files, review decisions, and reports.
+
+Employees register for an account, but cannot sign in until an administrator approves them. Administrators manage the workforce and work review process from a dedicated dashboard; employees track their personal and shared work from an employee workspace.
+
+## Core workflow
+
+1. An employee registers with profile, department, designation, and password details.
+2. The new account is created with **Pending** status. The employee cannot log in yet.
+3. An administrator opens **Employee Approvals**, reviews the employee details, and changes the status to **Active** (approve) or **Inactive** (reject/disable).
+4. The administrator creates a task and assigns it to one employee or multiple employees for team work.
+5. Employees add progress milestones. For example, 20% today and 30% tomorrow produces 50% total progress.
+6. Employees can attach ZIP work files to their latest progress milestone.
+7. The administrator reviews uploaded files from **Pending File Reviews** and approves or rejects them with a reason. Rejecting a file deducts the linked milestone from the employee's progress.
+8. Employees see their cumulative work completion, task status, and teammate progress for shared tasks. Administrators can download a PDF report.
 
 ## Features
 
-### Admin
-- Admin login and dashboard
-- Employee management
-- Department management
-- Task assignment and task management
-- Task file management
-- Progress monitoring
-- Extension request management
-- Employee/team messaging
-- Notifications
-- Visitor message management
+### Administrator workspace
 
-### Employee
-- Employee login and dashboard
-- View assigned tasks
-- Update task progress
-- Upload task-related files
-- Request task extensions
-- View notifications
-- Send and receive messages
-- Manage profile information
+- Dashboard counters for employees, departments, total/pending/in-progress/completed/overdue work, inactive employees, employee approvals, file reviews, and extension requests.
+- Clickable dashboard counters:
+  - **Employee Approvals** opens the pending employee list.
+  - **Overdue Works** opens the overdue work filter with assigned employees.
+  - **Extension Requests** opens the request review page.
+  - **Pending File Reviews** opens the submitted-file review panel.
+- Employee management with photo, contact details, department, designation, and status.
+- A red notification dot on the employee edit action when an account is awaiting approval.
+- Department creation and management.
+- Single-employee and multi-employee task assignment, deadline, priority, and status management.
+- Filters for task status and assigned employee, including overdue work.
+- Central file-review panel with approve/reject action and rejection reason.
+- Extension-request review, notifications, employee/admin messaging, and visitor messages.
+- Downloadable PDF report with employee details, assigned work, status, and progress.
 
-### Public / Landing Pages
-- Home/landing page
-- About section
-- Visitor "Let's Talk" contact/message form
+### Employee workspace
 
-## Technology Stack
+- Sign in only after administrator approval.
+- View assigned tasks, deadlines, priorities, extension status, and cumulative progress.
+- Add progress milestones; values are cumulative and cannot exceed 100%.
+- Upload JPG/PNG profile photos up to 15 MB during registration.
+- Upload ZIP work files for administrator review.
+- See a rejection reason when a submitted file is rejected.
+- Work Overview with exact completed-versus-remaining progress and completed/pending/in-progress counters.
+- Teammate progress bars for shared tasks.
+- Extension requests, notifications, messages, profile, and account settings.
 
-- Python
-- Django
-- SQLite (development database)
-- HTML5
-- CSS3
-- JavaScript
-- Bootstrap / frontend libraries used by the project
+## Technology
 
-## Project Structure
+- Python and Django
+- SQLite for local development
+- HTML, CSS, JavaScript, Bootstrap Icons, and Chart.js
+
+## Project structure
 
 ```text
 work_management/
 └── work_manage/
     ├── manage.py
-    ├── work_manage/
-    │   ├── settings.py
-    │   ├── urls.py
-    │   ├── asgi.py
-    │   └── wsgi.py
+    ├── db.sqlite3
+    ├── media/
+    ├── work_manage/             # Django settings and root URLs
     └── work_manage_app/
-        ├── models.py
-        ├── views.py
-        ├── urls.py
-        ├── admin.py
-        ├── apps.py
-        ├── migrations/
-        ├── templates/
-        │   ├── admin/
-        │   ├── employee/
-        │   └── landing/
-        └── static/
-            ├── css/
-            ├── js/
-            └── images/
+        ├── models.py             # Employee, task, progress, file, and message models
+        ├── views.py              # Application workflows and PDF response
+        ├── urls.py               # Application routes
+        ├── migrations/           # Database schema history
+        ├── templates/            # Admin, employee, and landing pages
+        ├── static/               # CSS, JavaScript, and images
+        └── tests.py              # Workflow regression tests
 ```
 
-## Installation
+## Local setup
 
-Open a terminal in the folder containing `manage.py`.
-
-```bash
-python -m venv venv
-```
-
-Activate the virtual environment on Windows PowerShell:
+Run the commands from `work_management/work_manage`.
 
 ```powershell
+python -m venv venv
 venv\Scripts\Activate.ps1
-```
-
-Install the project dependencies available for the project environment, then run migrations:
-
-```bash
-python manage.py makemigrations
+pip install django pillow
 python manage.py migrate
-```
-
-## Run the Development Server
-
-```bash
 python manage.py runserver
 ```
 
-Then open the local Django server address shown in the terminal.
+Open the local URL printed by Django, normally `http://127.0.0.1:8000/`.
 
-## Useful Django Commands
+### Useful commands
 
-Check the project for configuration errors:
-
-```bash
+```powershell
 python manage.py check
-```
-
-Create migrations after model changes:
-
-```bash
-python manage.py makemigrations
-```
-
-Apply migrations:
-
-```bash
+python manage.py test
+python manage.py makemigrations --check --dry-run
 python manage.py migrate
 ```
 
-Collect static files when required for production deployment:
+## Deployment notes
 
-```bash
-python manage.py collectstatic
-```
-
-## Notes
-
-- Keep uploaded media files separate from source code when deploying to production.
-- Do not expose production secrets or credentials in publicly accessible source code.
-- Development settings such as SQLite and Django's development server should be reviewed before production deployment.
-
-## Project Status
-
-The project is under active development. Features and deployment configuration may change as the application is improved.
+- Run `python manage.py migrate` after pulling changes so the file-review and approval fields exist in the database.
+- Configure `DJANGO_SECRET_KEY`, `DJANGO_DEBUG`, and `DJANGO_ALLOWED_HOSTS` for production.
+- Configure email environment variables only when email delivery is required.
+- Store `media/` uploads in persistent storage and run `collectstatic` when required by the hosting platform.

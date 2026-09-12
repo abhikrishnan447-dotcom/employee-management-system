@@ -1,7 +1,7 @@
 {% extends 'admin/admin_base.html' %}
 {% block title %}Employees | WorkSphere{% endblock %}
 {% block content %}
-<div class="page-title mb-4"><h1>Employee Management</h1><p>Manage employees and department assignments.</p></div>
+<div class="page-title mb-4"><div><h1>Employee Management</h1><p>Manage employees and department assignments.</p></div>{% if selected_status %}<a class="btn btn-sm btn-outline-secondary" href="{% url 'employee_management' %}">Show all employees</a>{% endif %}</div>
 <div class="card-pro p-0 overflow-hidden">
   <div class="table-responsive"><table class="table employee-table align-middle mb-0">
     <thead><tr><th>Employee</th><th>Email</th><th>Phone</th><th>Department</th><th>Designation</th><th>Status</th><th class="text-end">Actions</th></tr></thead>
@@ -16,7 +16,7 @@
       <td class="text-nowrap">{{ employee.email }}</td><td class="text-nowrap">{{ employee.phone }}</td>
       <td>{{ employee.department.name|default:'—' }}</td><td>{{ employee.designation|default:'—' }}</td><td><span class="badge-soft">{{ employee.status }}</span></td>
       <td class="text-end text-nowrap"><div class="d-inline-flex align-items-center gap-2">
-        <a class="btn btn-sm btn-outline-primary" href="{% url 'employee_edit' employee.id %}" title="Edit employee" aria-label="Edit employee"><i class="bi bi-pencil-square"></i></a>
+        <a class="btn btn-sm btn-outline-primary employee-edit-action" href="{% url 'employee_edit' employee.id %}" title="{% if employee.status == 'Pending' %}Approve or reject pending employee{% else %}Edit employee{% endif %}" aria-label="{% if employee.status == 'Pending' %}Approve or reject pending employee{% else %}Edit employee{% endif %}"><i class="bi bi-pencil-square"></i>{% if employee.status == 'Pending' %}<span class="pending-employee-dot" aria-hidden="true"></span>{% endif %}</a>
         <form method="post" action="{% url 'employee_delete' employee.id %}" class="d-inline" data-confirm="Delete this employee permanently?">{% csrf_token %}<button class="btn btn-sm btn-outline-danger" type="submit" title="Delete employee" aria-label="Delete employee"><i class="bi bi-trash"></i></button></form>
       </div></td>
     </tr>

@@ -38,6 +38,7 @@ body {
 .password-wrap .form-control { padding-right: 45px; }
 .password-toggle { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); border: 0; background: transparent; color: #777; cursor: pointer; padding: 4px; z-index: 3; }
 .password-toggle:hover { color: #ef5b5b; }
+input[type="password"]::-ms-reveal,input[type="password"]::-ms-clear { display: none; }
 .password-hint { font-size: 10px; color: #999da5; margin-top: 5px; }
 .photo-box { min-height: 70px; display: flex; align-items: center; gap: 15px; padding: 9px; border: 1px dashed #dddfe5; border-radius: 12px; background: #fff; }
 .photo-placeholder,.photo-preview { width: 52px; height: 52px; min-width: 52px; border-radius: 50%; }

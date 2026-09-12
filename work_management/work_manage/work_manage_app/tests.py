@@ -3,7 +3,7 @@ from datetime import date, timedelta
 from django.test import TestCase
 from django.core.files.uploadedfile import SimpleUploadedFile
 
-from .models import ProgressUpdate, Register, Task, TaskFile
+from .models import ExtensionRequest, ProgressUpdate, Register, Task, TaskFile
 from .views import employee_progress, sync_task_progress
 
 
@@ -160,6 +160,41 @@ class WorkProgressTests(TestCase):
         response = self.client.get("/admin/dashboard/")
         self.assertEqual(response.context["pending_file_reviews"], 1)
         self.assertContains(response, "Pending File Reviews")
+
+    def test_dashboard_counter_links_and_pending_employee_filter(self):
+        pending = Register.objects.create(
+            name="Pending Employee",
+            email="pending-filter@example.com",
+            phone="9876543222",
+            password="unused",
+            status="Pending",
+        )
+        overdue = Task.objects.create(
+            title="Overdue task",
+            description="Dashboard link test",
+            assigned_to=self.employee,
+            deadline=date.today() - timedelta(days=1),
+            status="Overdue",
+        )
+        ExtensionRequest.objects.create(
+            task=overdue,
+            employee=self.employee,
+            requested_deadline=date.today() + timedelta(days=2),
+            reason="Need more time",
+        )
+        session = self.client.session
+        session["admin"] = "admin@gmail.com"
+        session.save()
+
+        dashboard = self.client.get("/admin/dashboard/")
+        self.assertContains(dashboard, '/admin/employees/?status=Pending')
+        self.assertContains(dashboard, '/admin/tasks/?status=Overdue')
+        self.assertContains(dashboard, '/admin/extensions/')
+
+        employees = self.client.get("/admin/employees/?status=Pending")
+        self.assertContains(employees, pending.name)
+        self.assertNotContains(employees, self.employee.name)
+        self.assertContains(employees, "pending-employee-dot")
 
     def test_employee_management_displays_designation(self):
         self.employee.designation = "Software Engineer"
