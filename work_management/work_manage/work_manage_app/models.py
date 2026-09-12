@@ -20,8 +20,9 @@ class Register(models.Model):
     department = models.ForeignKey(Department, on_delete=models.SET_NULL, null=True, blank=True, related_name="registered_employees")
     designation = models.CharField(max_length=100, blank=True)
     password = models.CharField(max_length=128)
-    STATUS_CHOICES = (("Active", "Active"), ("Inactive", "Inactive"))
-    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default="Active")
+    STATUS_CHOICES = (("Pending", "Pending approval"), ("Active", "Active"), ("Inactive", "Inactive"))
+    # New registrations must be explicitly approved by an administrator.
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default="Pending")
 
     def __str__(self):
         return self.name
@@ -79,7 +80,12 @@ class ProgressUpdate(models.Model):
 class TaskFile(models.Model):
     task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name="uploaded_files")
     employee = models.ForeignKey(Register, on_delete=models.CASCADE, related_name="task_files")
+    progress_update = models.ForeignKey(ProgressUpdate, on_delete=models.SET_NULL, null=True, blank=True, related_name="files")
     file = models.FileField(upload_to="task_files/")
+    REVIEW_CHOICES = (("Pending", "Pending"), ("Approved", "Approved"), ("Rejected", "Rejected"))
+    review_status = models.CharField(max_length=10, choices=REVIEW_CHOICES, default="Pending")
+    rejection_reason = models.TextField(blank=True)
+    reviewed_at = models.DateTimeField(null=True, blank=True)
     uploaded_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

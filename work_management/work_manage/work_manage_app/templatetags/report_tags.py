@@ -1,5 +1,6 @@
 from django import template
-from ..models import Task
+from django.db.models import Sum
+from ..models import Task, TaskFile
 
 register = template.Library()
 
@@ -22,8 +23,8 @@ def report_tasks():
         employee_rows = []
         percentages = []
         for employee in employees:
-            latest = task.updates.filter(employee=employee).first()
-            percentage = latest.progress if latest else 0
+            rejected_ids = TaskFile.objects.filter(task=task, employee=employee, review_status="Rejected", progress_update__isnull=False).values_list("progress_update_id", flat=True)
+            percentage = task.updates.filter(employee=employee).exclude(id__in=rejected_ids).aggregate(total=Sum("progress"))["total"] or 0
             percentage = max(0, min(100, int(percentage)))
             percentages.append(percentage)
             employee_rows.append({

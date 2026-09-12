@@ -1,14 +1,16 @@
 import re
 from datetime import date
+from io import BytesIO
 
 from django.contrib import messages
 from django.contrib.auth.hashers import check_password, make_password
 from django.core.mail import send_mail
-from django.db.models import Avg, Count, Q
+from django.db.models import Avg, Count, Q, Sum
 from django.db.models.signals import post_save
 from django.dispatch import receiver
-from django.http import JsonResponse
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 
 from .models import (
@@ -28,7 +30,7 @@ from .models import (
 # ==============================
 # AUTH / COMMON HELPERS
 # ==============================
-ADMIN_EMAIL = "admin@gamil.com"
+ADMIN_EMAIL = "admin@gmail.com"
 ADMIN_PASSWORD = "admin@123"
 PASSWORD_PATTERN = re.compile(r"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$")
 
@@ -47,6 +49,30 @@ def employee_task_queryset(user):
         Q(assigned_employees=user) |
         Q(assigned_employees__isnull=True, assigned_to=user)
     ).distinct()
+
+
+def employee_progress(task, employee):
+    """Cumulative progress, excluding a milestone whose submitted file was rejected."""
+    rejected_ids = TaskFile.objects.filter(
+        task=task, employee=employee, review_status="Rejected", progress_update__isnull=False
+    ).values_list("progress_update_id", flat=True)
+    total = task.updates.filter(employee=employee).exclude(id__in=rejected_ids).aggregate(total=Sum("progress"))["total"] or 0
+    return min(100, max(0, total))
+
+
+def sync_task_progress(task):
+    employees = list(task.employees())
+    values = [employee_progress(task, employee) for employee in employees]
+    task.progress = round(sum(values) / len(values)) if values else 0
+    task.status = "Completed" if values and all(value == 100 for value in values) else "In Progress" if task.progress else "Pending"
+    if task.deadline < date.today() and task.status != "Completed":
+        task.status = "Overdue"
+    task.save(update_fields=["progress", "status"])
+    return task.progress
+
+
+def task_is_overdue(task):
+    return task.deadline < date.today() and task.status != "Completed"
 
 
 # ==============================
@@ -87,8 +113,8 @@ def register(request):
             )
         elif password != confirm_password:
             messages.error(request, "Passwords do not match.")
-        elif profile_photo and profile_photo.size > 2 * 1024 * 1024:
-            messages.error(request, "Profile photo must be smaller than 2 MB.")
+        elif profile_photo and profile_photo.size > 10 * 1024 * 1024:
+            messages.error(request, "Profile photo must be smaller than 10 MB.")
         else:
             employee = Register.objects.create(
                 name=name,
@@ -98,13 +124,14 @@ def register(request):
                 password=make_password(password),
                 profile_photo=profile_photo,
                 department_id=department_id,
+                status="Pending",
             )
             if department_id:
                 EmployeeDepartment.objects.update_or_create(
                     employee=employee,
                     defaults={"department_id": department_id},
                 )
-            messages.success(request, "Registration successful. Please login.")
+            messages.success(request, "Registration received. You can log in after an administrator approves your account.")
             return redirect("login")
 
     return render(request, "employee/register.html", {"departments": Department.objects.all()})
@@ -119,7 +146,11 @@ def employee_login(request):
         email = request.POST.get("email", "").strip().lower()
         password = request.POST.get("password", "")
         user = Register.objects.filter(email=email).first()
-        if user and user.status == "Active":
+        if user and user.status == "Pending":
+            messages.error(request, "Your account is waiting for administrator approval.")
+        elif user and user.status == "Inactive":
+            messages.error(request, "Your account is inactive. Please contact the administrator.")
+        elif user and user.status == "Active":
             authenticated = check_password(password, user.password)
             if not authenticated and user.password == password:
                 user.password = make_password(password)
@@ -220,19 +251,23 @@ def dashboard(request):
     task_rows = []
     for task in tasks:
         extension = task.extension_requests.filter(employee=user).first()
-        latest_update = task.updates.filter(employee=user).first()
+        progress_value = employee_progress(task, user)
+        status = "Completed" if progress_value == 100 else "Overdue" if task_is_overdue(task) else "In Progress" if progress_value else "Pending"
         task_rows.append({
             "task": task,
             "extension_status": extension.status if extension else "Not Requested",
-            "latest_progress": latest_update.progress if latest_update else task.progress,
+            "latest_progress": progress_value,
+            "display_status": status,
         })
+    pending = sum(row["display_status"] == "Pending" for row in task_rows)
+    in_progress = sum(row["display_status"] == "In Progress" for row in task_rows)
+    completed = sum(row["display_status"] == "Completed" for row in task_rows)
+    overdue = sum(row["display_status"] == "Overdue" for row in task_rows)
     return render(request, "employee/dashboard.html", {
         "user": user,
         "tasks": tasks,
         "task_rows": task_rows,
-        "pending": tasks.filter(status="Pending").count(),
-        "progress": tasks.filter(status="In Progress").count(),
-        "completed": tasks.filter(status="Completed").count(),
+        "pending": pending, "progress": in_progress, "completed": completed, "overdue": overdue,
     })
 
 
@@ -254,6 +289,7 @@ def task_detail(request, task_id):
         "updates": task.updates.filter(employee=user),
         "extensions": task.extension_requests.filter(employee=user),
         "files": task.uploaded_files.filter(employee=user),
+        "employee_progress": employee_progress(task, user),
     })
 
 
@@ -289,24 +325,21 @@ def progress_update(request, task_id):
             progress = max(0, min(100, int(request.POST.get("progress", 0))))
         except (TypeError, ValueError):
             progress = 0
+        remaining = 100 - employee_progress(task, user)
+        progress = min(progress, max(0, remaining))
+        if progress == 0:
+            messages.error(request, "There is no remaining progress to add for this task.")
+            return redirect("progress_updates")
         ProgressUpdate.objects.create(
             task=task,
             employee=user,
             progress=progress,
             note=request.POST.get("note", "").strip(),
         )
-        task.progress = progress
-        if progress == 100:
-            task.status = "Completed"
-        elif task.status != "Completed":
-            task.status = "In Progress" if progress > 0 or task.status == "In Progress" else "Pending"
-        task.save(update_fields=["progress", "status"])
-        messages.success(request, "Progress saved successfully.")
+        sync_task_progress(task)
+        messages.success(request, f"Added {progress}% progress. Your total progress is now {employee_progress(task, user)}%.")
     return redirect("progress_updates")
 
-
-def progress_update_fixed(request, task_id):
-    return progress_update(request, task_id)
 
 
 def progress_edit(request, update_id):
@@ -322,15 +355,10 @@ def progress_edit(request, update_id):
         update.note = request.POST.get("note", update.note).strip()
         update.save()
         task = update.task
-        task.progress = update.progress
-        task.status = "Completed" if update.progress == 100 else "In Progress" if update.progress > 0 else task.status
-        task.save(update_fields=["progress", "status"])
+        sync_task_progress(task)
         messages.success(request, "Progress update edited successfully.")
     return redirect("progress_updates")
 
-
-def progress_edit_fixed(request, update_id):
-    return progress_edit(request, update_id)
 
 
 def progress_delete(request, update_id):
@@ -341,30 +369,22 @@ def progress_delete(request, update_id):
     task = update.task
     if request.method == "POST":
         update.delete()
-        latest = task.updates.filter(employee=user).first()
-        task.progress = latest.progress if latest else 0
-        if task.progress == 100:
-            task.status = "Completed"
-        elif task.progress > 0:
-            task.status = "In Progress"
-        elif task.status != "Pending":
-            task.status = "Pending"
-        task.save(update_fields=["progress", "status"])
+        sync_task_progress(task)
         messages.success(request, "Progress update deleted.")
     return redirect("progress_updates")
 
-
-def progress_delete_fixed(request, update_id):
-    return progress_delete(request, update_id)
 
 
 def progress_updates(request):
     user = current_employee(request)
     if not user:
         return redirect("login")
+    tasks = list(employee_task_queryset(user))
+    for task in tasks:
+        task.employee_progress = employee_progress(task, user)
     return render(request, "employee/progress_updates.html", {
         "user": user,
-        "tasks": employee_task_queryset(user),
+        "tasks": tasks,
         "updates": user.progress_updates.select_related("task").all(),
     })
 
@@ -377,15 +397,14 @@ def task_file_upload(request, task_id):
     if request.method == "POST":
         uploaded = request.FILES.get("file")
         if uploaded:
-            TaskFile.objects.create(task=task, employee=user, file=uploaded)
+            TaskFile.objects.create(
+                task=task, employee=user, file=uploaded,
+                progress_update=task.updates.filter(employee=user).first(),
+            )
             messages.success(request, "Task file uploaded successfully.")
         else:
             messages.error(request, "Please select a file to upload.")
     return redirect("task_detail", task_id=task.id)
-
-
-def task_file_upload_fixed(request, task_id):
-    return task_file_upload(request, task_id)
 
 
 def task_file_delete(request, file_id):
@@ -477,29 +496,67 @@ def clear_notifications(request):
     return redirect("notifications")
 
 
-def messages_view_fixed(request):
+
+
+def messages_view(request):
     user = current_employee(request)
     if not user:
         return redirect("login")
+
     if request.method == "POST":
         recipient_id = request.POST.get("recipient")
         subject = request.POST.get("subject", "").strip()
         body = request.POST.get("body", "").strip()
+
         if recipient_id == "admin":
-            Message.objects.create(sender=user, recipient=None, subject=subject, body=body, is_admin_recipient=True)
+            Message.objects.create(
+                sender=user,
+                recipient=None,
+                subject=subject,
+                body=body,
+                is_admin_recipient=True,
+            )
             messages.success(request, "Message sent to administrator.")
+
         elif recipient_id and subject and body:
-            recipient = get_object_or_404(Register, id=recipient_id, status="Active")
-            Message.objects.create(sender=user, recipient=recipient, subject=subject, body=body)
+            recipient = get_object_or_404(
+                Register,
+                id=recipient_id,
+                status="Active"
+            )
+            Message.objects.create(
+                sender=user,
+                recipient=recipient,
+                subject=subject,
+                body=body,
+            )
             messages.success(request, "Message sent successfully.")
-    received = Message.objects.filter(Q(sender=user) | Q(recipient=user)).select_related("sender", "recipient")
-    Message.objects.filter(recipient=user, is_read=False).update(is_read=True)
-    employees = Register.objects.filter(status="Active").exclude(id=user.id).order_by("name")
-    return render(request, "employee/messages.html", {"user": user, "received": received, "employees": employees})
 
+    received = Message.objects.filter(
+        Q(sender=user) | Q(recipient=user)
+    ).select_related("sender", "recipient")
 
-def messages_view(request):
-    return messages_view_fixed(request)
+    Message.objects.filter(
+        recipient=user,
+        is_read=False
+    ).update(is_read=True)
+
+    employees = Register.objects.filter(
+        status="Active"
+    ).exclude(
+        id=user.id
+    ).order_by("name")
+
+    return render(
+        request,
+        "employee/messages.html",
+        {
+            "user": user,
+            "received": received,
+            "employees": employees,
+        },
+    )
+
 
 
 def clear_messages(request):
@@ -532,11 +589,14 @@ def admin_dash(request):
     return render(request, "admin/dashboard.html", {
         "total_employees": Register.objects.count(),
         "active_employees": Register.objects.filter(status="Active").count(),
+        "pending_approval": Register.objects.filter(status="Pending").count(),
+        "total_departments": Department.objects.count(),
         "total_tasks": Task.objects.count(),
         "pending_tasks": Task.objects.filter(status="Pending").count(),
         "progress_tasks": Task.objects.filter(status="In Progress").count(),
         "pending_extensions": ExtensionRequest.objects.filter(status="Pending").count(),
         "completed_tasks": Task.objects.filter(status="Completed").count(),
+        "overdue_tasks": Task.objects.filter(deadline__lt=date.today()).exclude(status="Completed").count(),
         "employees": Register.objects.select_related("department").order_by("name")[:8],
     })
 
@@ -607,7 +667,16 @@ def department_delete(request, department_id):
 def task_management(request):
     if not is_admin(request):
         return redirect("adminlogin")
-    return render(request, "admin/tasks.html", {"tasks": Task.objects.select_related("assigned_to", "department").prefetch_related("assigned_employees", "uploaded_files__employee"), "employees": Register.objects.filter(status="Active"), "departments": Department.objects.all()})
+    tasks = Task.objects.select_related("assigned_to", "department").prefetch_related("assigned_employees", "uploaded_files__employee")
+    selected_status = request.GET.get("status", "")
+    selected_employee = request.GET.get("employee", "")
+    if selected_status == "Overdue":
+        tasks = tasks.filter(deadline__lt=date.today()).exclude(status="Completed")
+    elif selected_status:
+        tasks = tasks.filter(status=selected_status)
+    if selected_employee:
+        tasks = tasks.filter(Q(assigned_to_id=selected_employee) | Q(assigned_employees__id=selected_employee)).distinct()
+    return render(request, "admin/tasks.html", {"tasks": tasks, "employees": Register.objects.filter(status="Active"), "departments": Department.objects.all(), "selected_status": selected_status, "selected_employee": str(selected_employee)})
 
 
 def assign_task(request):
@@ -669,7 +738,29 @@ def task_delete(request, task_id):
 def admin_task_files(request):
     if not is_admin(request):
         return redirect("adminlogin")
-    return render(request, "admin/task_files.html", {"files": TaskFile.objects.select_related("task", "employee").all()})
+    return render(request, "admin/task_files.html", {"files": TaskFile.objects.select_related("task", "employee", "progress_update").all()})
+
+
+def admin_task_file_review(request, file_id, action):
+    if not is_admin(request):
+        return redirect("adminlogin")
+    item = get_object_or_404(TaskFile, id=file_id)
+    if request.method == "POST" and action in ("approve", "reject"):
+        item.review_status = "Approved" if action == "approve" else "Rejected"
+        item.rejection_reason = request.POST.get("rejection_reason", "").strip() if action == "reject" else ""
+        item.reviewed_at = timezone.now()
+        item.save(update_fields=["review_status", "rejection_reason", "reviewed_at"])
+        sync_task_progress(item.task)
+        if action == "reject":
+            message = f"Your file for {item.task.title} was rejected."
+            if item.rejection_reason:
+                message += f" Reason: {item.rejection_reason}"
+            Notification.objects.create(recipient=item.employee, title="File rejected", message=message)
+            messages.success(request, "File rejected and its linked progress was deducted.")
+        else:
+            Notification.objects.create(recipient=item.employee, title="File approved", message=f"Your file for {item.task.title} was approved.")
+            messages.success(request, "File approved.")
+    return redirect("admin_task_files")
 
 
 def admin_task_file_delete(request, file_id):
@@ -710,6 +801,50 @@ def reports(request):
     tasks = Task.objects.all()
     by_department = Department.objects.annotate(task_count=Count("tasks")).order_by("name")
     return render(request, "admin/reports.html", {"total": tasks.count(), "pending": tasks.filter(status="Pending").count(), "progress": tasks.filter(status="In Progress").count(), "completed": tasks.filter(status="Completed").count(), "by_department": by_department})
+
+
+def report_pdf(request):
+    """Dependency-free printable PDF of employees and their assigned work."""
+    if not is_admin(request):
+        return redirect("adminlogin")
+
+    lines = ["WORKSPHERE - ADMINISTRATION REPORT", f"Generated: {timezone.localtime():%d %b %Y %H:%M}", "", "EMPLOYEES"]
+    for employee in Register.objects.select_related("department").order_by("name"):
+        lines.append(f"- {employee.name} | {employee.email} | {employee.department or 'No department'} | {employee.status}")
+    lines.extend(["", "ASSIGNED WORK"])
+    for task in Task.objects.prefetch_related("assigned_employees", "updates__employee").order_by("deadline", "title"):
+        people = list(task.employees())
+        progress_text = ", ".join(f"{person.name}: {employee_progress(task, person)}%" for person in people) or "Unassigned"
+        lines.append(f"- {task.title} | Deadline: {task.deadline} | Status: {task.status} | {progress_text}")
+
+    def pdf_escape(value):
+        return value.encode("latin-1", "replace").decode("latin-1").replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)")
+    page_lines, pages = 48, []
+    for start in range(0, len(lines), page_lines):
+        content = ["BT", "/F1 10 Tf", "50 790 Td", "14 TL"]
+        for line in lines[start:start + page_lines]:
+            content.append(f"({pdf_escape(line[:130])}) Tj")
+            content.append("T*")
+        content.append("ET")
+        pages.append("\n".join(content).encode("latin-1"))
+    objects = [b"<< /Type /Catalog /Pages 2 0 R >>", None, b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>"]
+    page_ids = []
+    for stream in pages:
+        page_id = len(objects) + 1
+        content_id = page_id + 1
+        page_ids.append(page_id)
+        objects.extend([f"<< /Type /Page /Parent 2 0 R /Resources << /Font << /F1 3 0 R >> >> /MediaBox [0 0 595 842] /Contents {content_id} 0 R >>".encode(), b"<< /Length %d >>\nstream\n" % len(stream) + stream + b"\nendstream"])
+    objects[1] = ("<< /Type /Pages /Kids [" + " ".join(f"{obj} 0 R" for obj in page_ids) + f"] /Count {len(page_ids)} >>").encode()
+    output = BytesIO(); output.write(b"%PDF-1.4\n")
+    offsets = [0]
+    for index, obj in enumerate(objects, 1):
+        offsets.append(output.tell()); output.write(f"{index} 0 obj\n".encode()); output.write(obj); output.write(b"\nendobj\n")
+    xref = output.tell(); output.write(f"xref\n0 {len(objects)+1}\n0000000000 65535 f \n".encode())
+    for offset in offsets[1:]: output.write(f"{offset:010d} 00000 n \n".encode())
+    output.write(f"trailer\n<< /Size {len(objects)+1} /Root 1 0 R >>\nstartxref\n{xref}\n%%EOF".encode())
+    response = HttpResponse(output.getvalue(), content_type="application/pdf")
+    response["Content-Disposition"] = 'attachment; filename="worksphere-admin-report.pdf"'
+    return response
 
 
 def admin_notifications(request):
