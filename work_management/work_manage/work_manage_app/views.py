@@ -5,7 +5,7 @@ from io import BytesIO
 from django.contrib import messages
 from django.contrib.auth.hashers import check_password, make_password
 from django.core.mail import send_mail
-from django.db.models import Avg, Count, Q, Sum
+from django.db.models import Count, Q, Sum
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.http import HttpResponse, JsonResponse
@@ -137,10 +137,6 @@ def register(request):
     return render(request, "employee/register.html", {"departments": Department.objects.all()})
 
 
-def registration_departments(request):
-    return render(request, "employee/register.html", {"departments": Department.objects.all()})
-
-
 def employee_login(request):
     if request.method == "POST":
         email = request.POST.get("email", "").strip().lower()
@@ -162,10 +158,6 @@ def employee_login(request):
                 return redirect("home")
         messages.error(request, "Invalid email or password.")
     return render(request, "employee/login.html")
-
-
-def login_view(request):
-    return employee_login(request)
 
 
 def forgot_password(request):
@@ -275,7 +267,16 @@ def employee_tasks(request):
     user = current_employee(request)
     if not user:
         return redirect("login")
-    return render(request, "employee/tasks.html", {"user": user, "tasks": employee_task_queryset(user)})
+    tasks = list(employee_task_queryset(user))
+    for task in tasks:
+        task.employee_progress = employee_progress(task, user)
+        task.employee_status = (
+            "Completed" if task.employee_progress == 100
+            else "Overdue" if task_is_overdue(task)
+            else "In Progress" if task.employee_progress
+            else "Pending"
+        )
+    return render(request, "employee/tasks.html", {"user": user, "tasks": tasks})
 
 
 def task_detail(request, task_id):
@@ -382,6 +383,7 @@ def progress_updates(request):
     tasks = list(employee_task_queryset(user))
     for task in tasks:
         task.employee_progress = employee_progress(task, user)
+        task.employee_files = task.uploaded_files.filter(employee=user)
     return render(request, "employee/progress_updates.html", {
         "user": user,
         "tasks": tasks,
