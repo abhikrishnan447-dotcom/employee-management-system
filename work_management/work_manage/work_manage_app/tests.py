@@ -55,6 +55,19 @@ class WorkProgressTests(TestCase):
         self.assertContains(response, "20%")
         self.assertNotContains(response, "85%")
 
+    def test_employee_dashboard_chart_uses_progress_percentages(self):
+        ProgressUpdate.objects.create(task=self.task, employee=self.employee, progress=20)
+        ProgressUpdate.objects.create(task=self.task, employee=self.employee, progress=30)
+        session = self.client.session
+        session["user_id"] = self.employee.id
+        session.save()
+
+        response = self.client.get("/dashboard/")
+        self.assertEqual(response.context["overall_progress"], 50)
+        self.assertEqual(response.context["completed_work_units"], 50)
+        self.assertEqual(response.context["remaining_work_units"], 50)
+        self.assertContains(response, "50% overall work completed")
+
     def test_pending_employee_cannot_log_in(self):
         pending = Register.objects.create(
             name="Pending Employee",
@@ -108,3 +121,20 @@ class WorkProgressTests(TestCase):
         self.assertContains(response, "Pending Works")
         self.assertContains(response, "In Progress Works")
         self.assertContains(response, "Inactive Employees")
+
+    def test_admin_dashboard_counts_pending_file_reviews(self):
+        update = ProgressUpdate.objects.create(task=self.task, employee=self.employee, progress=20)
+        TaskFile.objects.create(
+            task=self.task,
+            employee=self.employee,
+            progress_update=update,
+            file="task_files/review-me.zip",
+            review_status="Pending",
+        )
+        session = self.client.session
+        session["admin"] = "admin@gmail.com"
+        session.save()
+
+        response = self.client.get("/admin/dashboard/")
+        self.assertEqual(response.context["pending_file_reviews"], 1)
+        self.assertContains(response, "Pending File Reviews")

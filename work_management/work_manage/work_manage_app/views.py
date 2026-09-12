@@ -255,11 +255,18 @@ def dashboard(request):
     in_progress = sum(row["display_status"] == "In Progress" for row in task_rows)
     completed = sum(row["display_status"] == "Completed" for row in task_rows)
     overdue = sum(row["display_status"] == "Overdue" for row in task_rows)
+    total_work_units = len(task_rows) * 100
+    completed_work_units = sum(row["latest_progress"] for row in task_rows)
+    remaining_work_units = total_work_units - completed_work_units
+    overall_progress = round((completed_work_units / total_work_units) * 100) if total_work_units else 0
     return render(request, "employee/dashboard.html", {
         "user": user,
         "tasks": tasks,
         "task_rows": task_rows,
         "pending": pending, "progress": in_progress, "completed": completed, "overdue": overdue,
+        "completed_work_units": completed_work_units,
+        "remaining_work_units": remaining_work_units,
+        "overall_progress": overall_progress,
     })
 
 
@@ -593,6 +600,7 @@ def admin_dash(request):
         "active_employees": Register.objects.filter(status="Active").count(),
         "inactive_employees": Register.objects.filter(status="Inactive").count(),
         "pending_approval": Register.objects.filter(status="Pending").count(),
+        "pending_file_reviews": TaskFile.objects.filter(review_status="Pending").count(),
         "total_departments": Department.objects.count(),
         "total_tasks": Task.objects.count(),
         "pending_tasks": Task.objects.filter(status="Pending").count(),

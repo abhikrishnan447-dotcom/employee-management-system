@@ -12,7 +12,8 @@
   <div class="col-sm-6 col-xl"><div class="card-pro stat-card"><div class="stat-icon"><i class="bi bi-arrow-repeat"></i></div><div><div class="stat-value">{{ progress_tasks }}</div><div class="stat-label">In Progress Works</div></div></div></div>
   <div class="col-sm-6 col-xl"><div class="card-pro stat-card"><div class="stat-icon"><i class="bi bi-check2-circle"></i></div><div><div class="stat-value">{{ completed_tasks }}</div><div class="stat-label">Completed</div></div></div></div>
   <div class="col-sm-6 col-xl"><div class="card-pro stat-card"><div class="stat-icon"><i class="bi bi-exclamation-triangle"></i></div><div><div class="stat-value">{{ overdue_tasks }}</div><div class="stat-label">Overdue Works</div></div></div></div>
-  <div class="col-sm-6 col-xl"><div class="card-pro stat-card"><div class="stat-icon"><i class="bi bi-person-hour"></i></div><div><div class="stat-value">{{ pending_approval }}</div><div class="stat-label">Awaiting Approval</div></div></div></div>
+  <div class="col-sm-6 col-xl"><div class="card-pro stat-card"><div class="stat-icon"><i class="bi bi-person-hour"></i></div><div><div class="stat-value">{{ pending_approval }}</div><div class="stat-label">Employee Approvals</div></div></div></div>
+  <div class="col-sm-6 col-xl"><a class="card-pro stat-card text-decoration-none" href="{% url 'admin_task_files' %}"><div class="stat-icon"><i class="bi bi-file-earmark-check"></i></div><div><div class="stat-value">{{ pending_file_reviews }}</div><div class="stat-label">Pending File Reviews</div></div></a></div>
   <div class="col-sm-6 col-xl"><div class="card-pro stat-card"><div class="stat-icon"><i class="bi bi-clock-history"></i></div><div><div class="stat-value">{{ pending_extensions }}</div><div class="stat-label">Extension Requests</div></div></div></div>
 </div>
 <div class="card-pro p-0 overflow-hidden mb-4">
